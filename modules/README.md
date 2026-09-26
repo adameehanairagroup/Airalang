@@ -34,6 +34,7 @@ import "<module_name>";
 | 14 | [`sqlite`](./sqlite.md) | Database | Lightweight embedded SQL relational database | `open()`, `query()`, `execute()`, `close()` |
 | 15 | [`net`](./net.md) | Networking | Host pings, TCP port checks, and IP discovery | `ping()`, `port_open()`, `local_ip()`, `fetch()` |
 | 16 | [`thread`](./thread.md) | Concurrency | Thread spawning, worker pools, and parallel execution | `spawn()`, `join()`, `pool()`, `sleep()` |
+| 17 | [`youtube`](./youtube.md) / `yt` | Media & Video | YouTube video/audio download engine via APM with progressive stream resolution | `get()`, `stream()`, `download()`, `title`, `duration` |
 
 ---
 *Maintained by the AiraLang Core Engineering Team. Created by Adam Eehan.*

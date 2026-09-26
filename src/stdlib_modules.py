@@ -170,13 +170,21 @@ def create_file_module():
             return os.path.getsize(path)
         return -1
 
+    def save_path(filepath):
+        path_str = str(filepath).strip()
+        dir_name = os.path.dirname(path_str)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+        return path_str
+
     return AiraModule("file", {
         "read": read_file,
         "write": write_file,
         "append": append_file,
         "exists": exists,
         "delete": delete,
-        "size": size
+        "size": size,
+        "save": save_path
     })
 
 def create_os_module():
@@ -198,6 +206,13 @@ def create_os_module():
     def mkdir(path):
         os.makedirs(path, exist_ok=True)
         return True
+
+    def save_path(filepath):
+        path_str = str(filepath).strip()
+        dir_name = os.path.dirname(path_str)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+        return path_str
 
     def get_args():
         if len(sys.argv) > 1:
@@ -222,6 +237,7 @@ def create_os_module():
         "getcwd": cwd,
         "listdir": listdir,
         "mkdir": mkdir,
+        "save": save_path,
         "args": get_args,
         "argv": get_args,
         "exit": exit_app,
@@ -1671,6 +1687,116 @@ def create_system_module():
         "cpu": get_cpu
     })
 
+def is_package_installed(pkg_name):
+    config_dir = os.path.expanduser("~/.config/airalang")
+    packages_file = os.path.join(config_dir, "installed_packages.json")
+    if os.path.exists(packages_file):
+        try:
+            with open(packages_file, "r", encoding="utf-8") as f:
+                pkgs = json.load(f)
+                return pkg_name.lower() in pkgs
+        except Exception:
+            pass
+    return False
+
+def create_youtube_module():
+    if not is_package_installed("youtube") and not is_package_installed("yt"):
+        raise ImportError(
+            "\033[1;31m[AiraLang Package Error]:\033[0m Module 'youtube' is not installed!\n"
+            "\033[1;36m💡 Run:\033[0m aira install youtube"
+        )
+    try:
+        import yt_dlp
+    except ImportError:
+        raise ImportError(
+            "\033[1;31m[AiraLang Package Error]:\033[0m Backend engine 'yt-dlp' is missing.\n"
+            "\033[1;36m💡 Run:\033[0m aira install youtube"
+        )
+
+    def get_video(url):
+        url_str = str(url).strip()
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'skip_download': True,
+            'extractor_args': {'youtube': {'player_client': ['android', 'ios', 'web']}}
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url_str, download=False)
+        except Exception as e:
+            raise RuntimeError(f"Aira YouTube Error: Failed to fetch video info: {e}")
+
+        title = info.get("title", "YouTube Video")
+        duration = info.get("duration", 0)
+        author = info.get("uploader", info.get("channel", "Unknown Channel"))
+        views = info.get("view_count", 0)
+
+        def get_stream(fmt="mp4"):
+            fmt_str = str(fmt).lower().strip()
+
+            def download(save_path=None):
+                if save_path:
+                    outtmpl = str(save_path).strip()
+                else:
+                    outtmpl = f"{title}.%(ext)s"
+
+                parent_dir = os.path.dirname(outtmpl)
+                if parent_dir:
+                    os.makedirs(parent_dir, exist_ok=True)
+
+                if fmt_str in ("mp3", "audio", "m4a"):
+                    ydl_dl_opts = {
+                        'format': 'bestaudio/best/140/251',
+                        'outtmpl': outtmpl,
+                        'quiet': False,
+                        'no_warnings': True,
+                        'extractor_args': {'youtube': {'player_client': ['android', 'ios', 'web']}}
+                    }
+                else:
+                    ydl_dl_opts = {
+                        'format': 'best[ext=mp4]/18/22/b/best',
+                        'outtmpl': outtmpl,
+                        'quiet': False,
+                        'no_warnings': True,
+                        'extractor_args': {'youtube': {'player_client': ['android', 'ios', 'web']}}
+                    }
+
+                try:
+                    with yt_dlp.YoutubeDL(ydl_dl_opts) as dl:
+                        dl.download([url_str])
+                    return outtmpl
+                except Exception as e:
+                    raise RuntimeError(f"Aira YouTube Download Error: {e}")
+
+            return AiraModule("youtube_stream", {
+                "download": download,
+                "format": fmt_str
+            })
+
+        return AiraModule("youtube_video", {
+            "title": title,
+            "duration": duration,
+            "author": author,
+            "uploader": author,
+            "views": views,
+            "url": url_str,
+            "stream": get_stream
+        })
+
+    def quick_download(url, save_path=None, fmt="mp4"):
+        video = get_video(url)
+        st = video.get("stream")(fmt)
+        return st.get("download")(save_path)
+
+    return AiraModule("youtube", {
+        "get": get_video,
+        "video": get_video,
+        "url": get_video,
+        "download": quick_download
+    })
+
 BUILTIN_MODULES = {
     "file": create_file_module,
     "os": create_os_module,
@@ -1689,6 +1815,8 @@ BUILTIN_MODULES = {
     "android": create_android_module,
     "droidsec": create_android_module,
     "system": create_system_module,
-    "hardware": create_system_module
+    "hardware": create_system_module,
+    "youtube": create_youtube_module,
+    "yt": create_youtube_module
 }
 
