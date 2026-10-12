@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=AiraGroupOfTechnology.airalang"><img src="https://img.shields.io/badge/VS_Code_Marketplace-AiraLang-007ACC?logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
   <a href="./releases/AiraLang-Studio.apk"><img src="https://img.shields.io/badge/Android_APK-AiraLang_Studio-3DDC84?logo=android&logoColor=white" alt="Android APK"></a>
-  <img src="https://img.shields.io/badge/Version-v1.4.5-brightgreen" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.5.0-brightgreen" alt="Version">
   <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20Termux%20%7C%20Android-blue" alt="OS">
   <img src="https://img.shields.io/badge/License-MIT-purple.svg" alt="License">
 </p>
@@ -262,10 +262,18 @@ let target = nums.find(fn(x) { return x > 4; }); # 5
 let sum = nums.reduce(fn(acc, val) { return acc + val; }, 0); # 21
 ```
 
+### 11. Modern String Interpolation (F-Strings)
+Embed dynamic expressions, variables, and calculations directly inside strings with native `f"..."` syntax:
+```aira
+let name = "Adam Eehan";
+let score = 95;
+say f"Welcome back, {name}! Your security audit score is {score + 5}/100.";
+```
+
 ---
 
 ## 📦 Standard Library Modules
-> 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 15 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
+> 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 22 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
 
 ### 🤖 Universal AI Integration Engine (`ai`)
 Directly integrate Generative AI from ANY provider in the world natively in AiraLang (OpenAI, DeepSeek, Anthropic Claude, Google Gemini, Groq, OpenRouter, Mistral, Ollama, Perplexity, Cerebras, or custom servers):
@@ -427,6 +435,65 @@ say "Current Time: " + time.now();
 import "utils.aira";
 let output = utils.my_custom_function();
 ```
+
+### 🌐 Native Micro Web Server Engine (`serve`)
+Deploy instant REST APIs, web backends, and microservices directly in AiraLang:
+```aira
+import "serve";
+
+serve.get("/api/health", fn(req) {
+    return {"status": "healthy", "service": "AiraLang v1.5.0 Engine"};
+});
+
+serve.post("/api/echo", fn(req) {
+    return {"received": req.body, "sender": "Er. Adam Eehan"};
+});
+
+# Start server on port 8080
+serve.start(8080);
+```
+
+### 🎨 Terminal UI & Aesthetics Suite (`term` / `ui`)
+Build professional cyberpunk CLI tools with ANSI formatting, ASCII data tables, and spinners:
+```aira
+import "term";
+
+say term.rainbow("⚡ Aira Group of Technology ⚡");
+term.box("AiraLang v1.5.0 Full-Stack Engine", title="STATUS", color="green");
+
+let headers = ["Module", "Category", "Status"];
+let rows = [
+    ["serve", "Web Engine", "Active"],
+    ["sec", "Cyber OSINT", "Active"],
+    ["term", "CLI Suite", "Active"]
+];
+term.table(headers, rows);
+```
+
+### 🤖 Event Webhooks & Bot Dispatcher (`webhook`, `bot`)
+Automate workflows and trigger real-time notifications across Telegram & Discord:
+```aira
+import "webhook";
+import "bot";
+
+# 1-Line Webhook Dispatch
+webhook.send("https://webhook.site/endpoint", {"event": "login", "user": "Adam"});
+
+# Telegram & Discord Notifications
+bot.telegram_send("YOUR_BOT_TOKEN", "CHAT_ID", "🚀 Deployment Successful!");
+bot.discord_send("https://discord.com/api/webhooks/...", "🔥 AiraLang v1.5.0 is live!");
+```
+
+### 🔑 Environment Secrets Manager (`env` / `dotenv`)
+Safely manage secrets by natively loading `.env` configuration files:
+```aira
+import "env";
+
+env.load(".env");
+let apiKey = env.get("GROQ_API_KEY");
+let port = env.get("PORT", "8080");
+```
+
 # 🎬 AiraLang `youtube` Module
 > **YouTube Video and Audio Downloader Engine (via APM)**
 
