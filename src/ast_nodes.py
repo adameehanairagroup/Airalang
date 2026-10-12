@@ -182,3 +182,9 @@ class NamedArgNode(ASTNode):
         self.value = value
         self.line = line
 
+class FStringNode(ASTNode):
+    def __init__(self, parts, line):
+        self.parts = parts
+        self.line = line
+
+

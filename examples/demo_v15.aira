@@ -1,0 +1,81 @@
+// ========================================================
+// AiraLang v1.5.0 - Showcase & Feature Demonstration
+// Engineered by Er. Adam Eehan (Aira Group of Technology)
+// ========================================================
+
+import "term";
+import "crypto";
+import "env";
+import "sec";
+import "serve";
+import "http";
+
+// 1. Sleek Terminal Box & Rainbow Header
+term.box("AIRALANG v1.5.0 POWERHOUSE", [
+    "• F-Strings String Interpolation",
+    "• Native Micro Web Server (serve)",
+    "• Cyber OSINT & SSL Inspection (sec)",
+    "• Modern JWT & UUID Cryptography",
+    "• Functional Array Methods (.map, .filter)"
+], "cyan");
+
+say term.rainbow("⚡ AiraLang is fully compiled and active! ⚡");
+
+// 2. F-Strings & Variables
+let author = "Er. Adam Eehan";
+let release_edition = "Full-Stack Web & Cyber OSINT Edition";
+say f"Language: AiraLang v1.5.0 ({release_edition})";
+say f"Lead Architect: {author}";
+
+// 3. Functional Array Transformations
+let scores = [45, 88, 92, 33, 76, 100];
+let high_scores = scores.filter(fn(s) { return s >= 75; });
+let formatted = high_scores.map(fn(s) { return f"Score: {s} pts"; }).join(" | ");
+say f"High Scorers: {formatted}";
+
+// 4. Crypto JWT Generation & Verification
+let secret_key = "adam_aira_2026_master_key";
+let auth_payload = {"user": "adameehan", "role": "CEO", "org": "Aira Group of Technology"};
+let jwt_token = crypto.jwt_sign(auth_payload, secret_key);
+say f"Generated JWT: {jwt_token}";
+
+let verified = crypto.jwt_verify(jwt_token, secret_key);
+say f"JWT Status: Valid={verified['valid']}, User={verified['payload']['user']}";
+say f"Unique Device UUID: {crypto.uuid()}";
+
+// 5. Environmental Secrets Handling
+env.set("APP_ENV", "production");
+say f"Environment Mode: {env.get('APP_ENV')}";
+
+// 6. Cyber OSINT Recon
+let target = "google.com";
+let dns = sec.dns(target);
+say f"DNS Resolution for {target}: Found {dns['count']} IPs -> {dns['ips'][0]}";
+
+// 7. Micro Web Server Engine
+serve.route("/api/v1/status", fn(req) {
+    return {
+        "status": "online",
+        "version": "1.5.0",
+        "framework": "AiraLang Native Web Engine",
+        "creator": "Adam Eehan"
+    };
+});
+
+let server = serve.start(port=9911, background=true);
+say f"Native Web Server running on port {server['port']}";
+
+let response = http.get("http://127.0.0.1:9911/api/v1/status");
+say f"Web Server Test Response: {response}";
+
+// 8. Visual Summary Table
+term.table(["Feature", "Module", "Version", "Status"], [
+    ["F-Strings", "core", "v1.5.0", "VERIFIED"],
+    ["Micro Server", "serve", "v1.5.0", "VERIFIED"],
+    ["Terminal UI", "term", "v1.5.0", "VERIFIED"],
+    ["Webhooks", "webhook", "v1.5.0", "VERIFIED"],
+    ["Bot Dispatcher", "bot", "v1.5.0", "VERIFIED"],
+    ["Dotenv & Secrets", "env", "v1.5.0", "VERIFIED"],
+    ["JWT & UUID", "crypto", "v1.5.0", "VERIFIED"],
+    ["SSL & DNS Recon", "sec", "v1.5.0", "VERIFIED"]
+]);

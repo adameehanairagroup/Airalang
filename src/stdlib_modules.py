@@ -16,6 +16,10 @@ import struct
 import zipfile
 import re
 import subprocess
+import ssl
+import hmac
+import uuid
+import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 class AiraModule:
@@ -344,6 +348,38 @@ def create_crypto_module():
     def b64decode(s):
         return base64.b64decode(str(s).encode('utf-8')).decode('utf-8')
 
+    def hmac_sha256(key, message):
+        return hmac.new(str(key).encode('utf-8'), str(message).encode('utf-8'), hashlib.sha256).hexdigest()
+
+    def uuid_str():
+        return str(uuid.uuid4())
+
+    def jwt_sign(payload, secret, alg="HS256"):
+        header = {"alg": alg, "typ": "JWT"}
+        h_json = json.dumps(header, separators=(',', ':')).encode('utf-8')
+        p_json = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+        h_b64 = base64.urlsafe_b64encode(h_json).decode('utf-8').rstrip('=')
+        p_b64 = base64.urlsafe_b64encode(p_json).decode('utf-8').rstrip('=')
+        signing_input = f"{h_b64}.{p_b64}".encode('utf-8')
+        sig = hmac.new(str(secret).encode('utf-8'), signing_input, hashlib.sha256).digest()
+        sig_b64 = base64.urlsafe_b64encode(sig).decode('utf-8').rstrip('=')
+        return f"{h_b64}.{p_b64}.{sig_b64}"
+
+    def jwt_verify(token, secret):
+        parts = str(token).split('.')
+        if len(parts) != 3:
+            return {"valid": False, "error": "Invalid JWT format"}
+        h_b64, p_b64, sig_b64 = parts
+        signing_input = f"{h_b64}.{p_b64}".encode('utf-8')
+        expected_sig = hmac.new(str(secret).encode('utf-8'), signing_input, hashlib.sha256).digest()
+        pad = '=' * (-len(sig_b64) % 4)
+        actual_sig = base64.urlsafe_b64decode(sig_b64 + pad)
+        if not hmac.compare_digest(expected_sig, actual_sig):
+            return {"valid": False, "error": "Invalid signature"}
+        pad_p = '=' * (-len(p_b64) % 4)
+        payload_data = json.loads(base64.urlsafe_b64decode(p_b64 + pad_p).decode('utf-8'))
+        return {"valid": True, "payload": payload_data}
+
     return AiraModule("crypto", {
         "md5": md5,
         "sha256": sha256,
@@ -351,8 +387,13 @@ def create_crypto_module():
         "base64_encode": b64encode,
         "base64_decode": b64decode,
         "b64encode": b64encode,
-        "b64decode": b64decode
+        "b64decode": b64decode,
+        "hmac": hmac_sha256,
+        "uuid": uuid_str,
+        "jwt_sign": jwt_sign,
+        "jwt_verify": jwt_verify
     })
+
 
 def create_string_module():
     return AiraModule("string", {
@@ -1034,6 +1075,42 @@ def create_sec_module():
         except Exception as e:
             return str(e)
 
+    def ssl_check(domain, port=443, timeout=5.0):
+        clean_dom = str(domain).replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+        try:
+            ctx = ssl.create_default_context()
+            with socket.create_connection((clean_dom, int(port)), timeout=float(timeout)) as sock:
+                with ctx.wrap_socket(sock, server_hostname=clean_dom) as ssock:
+                    cert = ssock.getpeercert()
+                    cipher = ssock.cipher()
+                    version = ssock.version()
+                    not_after = cert.get('notAfter')
+                    expiry = datetime.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z") if not_after else None
+                    days_left = (expiry - datetime.datetime.utcnow()).days if expiry else None
+                    issuer_dict = dict(x[0] for x in cert.get('issuer', []))
+                    subject_dict = dict(x[0] for x in cert.get('subject', []))
+                    return {
+                        "domain": clean_dom,
+                        "valid": days_left > 0 if days_left is not None else False,
+                        "days_left": days_left,
+                        "expires_on": not_after,
+                        "tls_version": version,
+                        "cipher": cipher[0] if cipher else None,
+                        "issuer": issuer_dict.get('commonName', issuer_dict.get('organizationName', 'Unknown')),
+                        "subject": subject_dict.get('commonName', 'Unknown')
+                    }
+        except Exception as e:
+            return {"domain": clean_dom, "valid": False, "error": str(e)}
+
+    def dns_lookup(domain):
+        clean_dom = str(domain).replace("https://", "").replace("http://", "").split("/")[0]
+        try:
+            addr_info = socket.getaddrinfo(clean_dom, None)
+            ips = sorted(list(set(item[4][0] for item in addr_info)))
+            return {"domain": clean_dom, "ips": ips, "count": len(ips)}
+        except Exception as e:
+            return {"domain": clean_dom, "error": str(e), "ips": []}
+
     return AiraModule("sec", {
         "scan_port": scan_port,
         "scan_ports": scan_ports,
@@ -1044,8 +1121,13 @@ def create_sec_module():
         "hash_identify": hash_identify,
         "crack_md5": crack_md5,
         "resolve": resolve,
-        "reverse_dns": reverse_dns
+        "reverse_dns": reverse_dns,
+        "ssl_check": ssl_check,
+        "ssl": ssl_check,
+        "dns_lookup": dns_lookup,
+        "dns": dns_lookup
     })
+
 
 def create_thread_module():
     def spawn(fn, args=None):
@@ -1797,6 +1879,314 @@ def create_youtube_module():
         "download": quick_download
     })
 
+def create_term_module():
+    COLORS = {
+        "black": "\033[30m", "red": "\033[31m", "green": "\033[32m", "yellow": "\033[33m",
+        "blue": "\033[34m", "magenta": "\033[35m", "cyan": "\033[36m", "white": "\033[37m",
+        "bright_black": "\033[90m", "bright_red": "\033[91m", "bright_green": "\033[92m",
+        "bright_yellow": "\033[93m", "bright_blue": "\033[94m", "bright_magenta": "\033[95m",
+        "bright_cyan": "\033[96m", "bright_white": "\033[97m",
+        "bold": "\033[1m", "dim": "\033[2m", "italic": "\033[3m", "underline": "\033[4m",
+        "reset": "\033[0m"
+    }
+
+    def color(col_name, text):
+        c = COLORS.get(str(col_name).lower(), "")
+        return f"{c}{text}\033[0m"
+
+    def rainbow(text):
+        rainbow_colors = ["\033[91m", "\033[93m", "\033[92m", "\033[96m", "\033[94m", "\033[95m"]
+        res = []
+        for i, ch in enumerate(str(text)):
+            c = rainbow_colors[i % len(rainbow_colors)]
+            res.append(f"{c}{ch}")
+        res.append("\033[0m")
+        return "".join(res)
+
+    def box(title, content=None, color_name="cyan", width=50):
+        w = max(int(width), len(str(title)) + 6)
+        c = COLORS.get(str(color_name).lower(), "\033[36m")
+        reset = "\033[0m"
+        top = f"{c}┌{'─' * (w - 2)}┐{reset}"
+        title_line = f"{c}│{reset} {COLORS.get('bold', '')}{str(title).center(w - 4)}{reset} {c}│{reset}"
+        div = f"{c}├{'─' * (w - 2)}┤{reset}"
+        bot = f"{c}└{'─' * (w - 2)}┘{reset}"
+        lines = [top, title_line]
+        if content:
+            lines.append(div)
+            if isinstance(content, list):
+                for item in content:
+                    item_str = str(item)
+                    if len(item_str) > w - 4: item_str = item_str[:w-7] + "..."
+                    lines.append(f"{c}│{reset} {item_str.ljust(w - 4)} {c}│{reset}")
+            else:
+                for line in str(content).splitlines():
+                    if len(line) > w - 4: line = line[:w-7] + "..."
+                    lines.append(f"{c}│{reset} {line.ljust(w - 4)} {c}│{reset}")
+        lines.append(bot)
+        res = "\n".join(lines)
+        print(res)
+        return res
+
+    def table(headers, rows):
+        headers = [str(h) for h in headers]
+        str_rows = [[str(cell) for cell in row] for row in rows]
+        col_widths = [len(h) for h in headers]
+        for row in str_rows:
+            for i, cell in enumerate(row):
+                if i < len(col_widths):
+                    col_widths[i] = max(col_widths[i], len(cell))
+                else:
+                    col_widths.append(len(cell))
+        sep = "┌" + "┬".join("─" * (w + 2) for w in col_widths) + "┐"
+        mid_sep = "├" + "┼".join("─" * (w + 2) for w in col_widths) + "┤"
+        bot_sep = "└" + "┴".join("─" * (w + 2) for w in col_widths) + "┘"
+        header_line = "│ " + " │ ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers))) + " │"
+        lines = [sep, f"\033[1;36m{header_line}\033[0m", mid_sep]
+        for row in str_rows:
+            row_padded = [row[i].ljust(col_widths[i]) if i < len(row) else "".ljust(col_widths[i]) for i in range(len(col_widths))]
+            lines.append("│ " + " │ ".join(row_padded) + " │")
+        lines.append(bot_sep)
+        res = "\n".join(lines)
+        print(res)
+        return res
+
+    def spinner(message="Working...", seconds=1.5):
+        frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        end_time = time.time() + float(seconds)
+        i = 0
+        while time.time() < end_time:
+            frame = frames[i % len(frames)]
+            sys.stdout.write(f"\r\033[36m{frame}\033[0m {message}")
+            sys.stdout.flush()
+            time.sleep(0.08)
+            i += 1
+        sys.stdout.write(f"\r\033[32m✔\033[0m {message}\n")
+        sys.stdout.flush()
+        return True
+
+    def clear():
+        os.system('clear' if os.name != 'nt' else 'cls')
+        return True
+
+    return AiraModule("term", {
+        "color": color,
+        "rainbow": rainbow,
+        "box": box,
+        "table": table,
+        "spinner": spinner,
+        "clear": clear
+    })
+
+def create_webhook_module():
+    def send(url, payload, headers=None, timeout=10.0):
+        if not isinstance(payload, (dict, list, str)):
+            payload = {"data": str(payload)}
+        body_data = json.dumps(payload).encode('utf-8') if not isinstance(payload, str) else payload.encode('utf-8')
+        req_headers = {"Content-Type": "application/json", "User-Agent": "AiraLang-Webhook/1.5.0"}
+        if isinstance(headers, dict):
+            req_headers.update(headers)
+        req = urllib.request.Request(str(url), data=body_data, headers=req_headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=float(timeout)) as resp:
+                resp_text = resp.read().decode('utf-8')
+                try:
+                    return {"status": resp.status, "data": json.loads(resp_text), "ok": True}
+                except:
+                    return {"status": resp.status, "data": resp_text, "ok": True}
+        except urllib.error.HTTPError as e:
+            return {"status": e.code, "error": str(e), "ok": False}
+        except Exception as e:
+            return {"status": 0, "error": str(e), "ok": False}
+
+    def listen(port, callback_handler):
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        class WebhookHandler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                try:
+                    data = json.loads(post_body)
+                except:
+                    data = post_body
+                req_obj = {"body": data, "headers": dict(self.headers), "path": self.path}
+                if hasattr(callback_handler, 'call'):
+                    res = callback_handler(req_obj)
+                elif callable(callback_handler):
+                    res = callback_handler(req_obj)
+                else:
+                    res = {"received": True}
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(res if isinstance(res, (dict, list)) else {"status": "ok"}).encode())
+            def log_message(self, format, *args):
+                pass
+        server = HTTPServer(('0.0.0.0', int(port)), WebhookHandler)
+        t = threading.Thread(target=server.serve_forever, daemon=True)
+        t.start()
+        return {"listening": True, "port": int(port)}
+
+    return AiraModule("webhook", {
+        "send": send,
+        "listen": listen
+    })
+
+def create_bot_module():
+    def telegram_send(bot_token, chat_id, message, parse_mode="HTML"):
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": str(message), "parse_mode": parse_mode}
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read().decode('utf-8'))
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def discord_send(webhook_url, content, username="Aira Bot", avatar_url=None):
+        payload = {"content": str(content), "username": username}
+        if avatar_url:
+            payload["avatar_url"] = avatar_url
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(str(webhook_url), data=data, headers={"Content-Type": "application/json", "User-Agent": "AiraLang-Bot/1.5.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return {"ok": True, "status": resp.status}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    return AiraModule("bot", {
+        "telegram_send": telegram_send,
+        "telegram": telegram_send,
+        "discord_send": discord_send,
+        "discord": discord_send
+    })
+
+def create_env_module():
+    def load(filepath=".env"):
+        if not os.path.exists(filepath):
+            return False
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip().strip('"').strip("'")
+                    os.environ[k] = v
+        return True
+
+    def get_env(key, default=None):
+        return os.environ.get(str(key), default)
+
+    def set_env(key, value):
+        os.environ[str(key)] = str(value)
+        return True
+
+    def all_env():
+        return dict(os.environ)
+
+    return AiraModule("env", {
+        "load": load,
+        "get": get_env,
+        "set": set_env,
+        "all": all_env
+    })
+
+def create_serve_module():
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    routes = {}
+
+    def route(path, handler_fn, method="GET"):
+        routes[(str(method).upper(), str(path))] = handler_fn
+        return True
+
+    def get_route(path, handler_fn):
+        return route(path, handler_fn, "GET")
+
+    def post_route(path, handler_fn):
+        return route(path, handler_fn, "POST")
+
+    class AiraHttpServerHandler(BaseHTTPRequestHandler):
+        def _handle(self, method):
+            parsed = urllib.parse.urlparse(self.path)
+            clean_path = parsed.path
+            handler = routes.get((method, clean_path))
+            if not handler:
+                handler = routes.get(("*", clean_path))
+            if not handler:
+                self.send_response(404)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Not Found", "path": clean_path}).encode())
+                return
+            req_data = None
+            if method in ("POST", "PUT", "PATCH"):
+                length = int(self.headers.get('Content-Length', 0))
+                raw_body = self.rfile.read(length).decode('utf-8', errors='ignore')
+                try: req_data = json.loads(raw_body)
+                except: req_data = raw_body
+            query_params = dict(urllib.parse.parse_qsl(parsed.query))
+            req_obj = {
+                "path": clean_path,
+                "method": method,
+                "query": query_params,
+                "body": req_data,
+                "headers": dict(self.headers)
+            }
+            try:
+                if callable(handler):
+                    res = handler(req_obj)
+                else:
+                    res = str(handler)
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+                return
+            self.send_response(200)
+            if isinstance(res, (dict, list)):
+                self.send_header('Content-Type', 'application/json')
+                body_bytes = json.dumps(res).encode('utf-8')
+            elif isinstance(res, str) and (res.strip().startswith("<html") or res.strip().startswith("<!DOCTYPE")):
+                self.send_header('Content-Type', 'text/html')
+                body_bytes = res.encode('utf-8')
+            else:
+                self.send_header('Content-Type', 'text/plain')
+                body_bytes = str(res).encode('utf-8')
+            self.end_headers()
+            self.wfile.write(body_bytes)
+
+        def do_GET(self): self._handle("GET")
+        def do_POST(self): self._handle("POST")
+        def do_PUT(self): self._handle("PUT")
+        def do_DELETE(self): self._handle("DELETE")
+        def log_message(self, format, *args): pass
+
+    def start(port=8080, host="0.0.0.0", background=False):
+        server = HTTPServer((str(host), int(port)), AiraHttpServerHandler)
+        print(f"\033[32m[AiraLang Serve]\033[0m HTTP Server running at http://{host}:{port}/")
+        if background:
+            t = threading.Thread(target=server.serve_forever, daemon=True)
+            t.start()
+            return {"running": True, "port": int(port)}
+        else:
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                print("\n[AiraLang Serve] Server stopped.")
+
+    return AiraModule("serve", {
+        "route": route,
+        "get": get_route,
+        "post": post_route,
+        "start": start
+    })
+
 BUILTIN_MODULES = {
     "file": create_file_module,
     "os": create_os_module,
@@ -1817,6 +2207,17 @@ BUILTIN_MODULES = {
     "system": create_system_module,
     "hardware": create_system_module,
     "youtube": create_youtube_module,
-    "yt": create_youtube_module
+    "yt": create_youtube_module,
+    "term": create_term_module,
+    "ui": create_term_module,
+    "cli_ui": create_term_module,
+    "webhook": create_webhook_module,
+    "bot": create_bot_module,
+    "telegram": create_bot_module,
+    "env": create_env_module,
+    "dotenv": create_env_module,
+    "serve": create_serve_module,
+    "server": create_serve_module
 }
+
 

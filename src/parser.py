@@ -410,12 +410,63 @@ class Parser:
                 break
         return atom
 
+    def parse_fstring(self, tok):
+        from lexer import Lexer
+        raw_str = tok.value
+        line = tok.line
+        parts = []
+        i = 0
+        n = len(raw_str)
+        cur_text = []
+        while i < n:
+            if raw_str[i] == '{':
+                if i + 1 < n and raw_str[i+1] == '{':
+                    cur_text.append('{')
+                    i += 2
+                    continue
+                if cur_text:
+                    parts.append((False, "".join(cur_text)))
+                    cur_text = []
+                i += 1
+                start = i
+                brace_count = 1
+                while i < n and brace_count > 0:
+                    if raw_str[i] == '{':
+                        brace_count += 1
+                    elif raw_str[i] == '}':
+                        brace_count -= 1
+                    i += 1
+                if brace_count > 0:
+                    raise SyntaxError(f"AiraLang SyntaxError: Unclosed '{{' in f-string at line {line}")
+                expr_str = raw_str[start:i-1].strip()
+                if expr_str:
+                    sub_tokens = Lexer(expr_str).tokenize()
+                    sub_parser = Parser(sub_tokens)
+                    expr_ast = sub_parser.parse_expression()
+                    parts.append((True, expr_ast))
+            elif raw_str[i] == '}':
+                if i + 1 < n and raw_str[i+1] == '}':
+                    cur_text.append('}')
+                    i += 2
+                    continue
+                cur_text.append('}')
+                i += 1
+            else:
+                cur_text.append(raw_str[i])
+                i += 1
+        if cur_text:
+            parts.append((False, "".join(cur_text)))
+        return FStringNode(parts, line)
+
     def parse_atom(self):
         tok = self.current()
         if self.match("NUMBER"):
             return LiteralNode(tok.value, "NUMBER", tok.line)
         if self.match("STRING"):
             return LiteralNode(tok.value, "STRING", tok.line)
+        if self.match("FSTRING"):
+            return self.parse_fstring(tok)
+
         if self.match("TRUE"):
             return LiteralNode(True, "BOOLEAN", tok.line)
         if self.match("FALSE"):

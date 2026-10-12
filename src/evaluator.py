@@ -341,6 +341,17 @@ class Evaluator:
         elif nodetype == "LiteralNode":
             return node.value
 
+        elif nodetype == "FStringNode":
+            result_pieces = []
+            for is_expr, item in node.parts:
+                if is_expr:
+                    val = self.eval_node(item, env)
+                    result_pieces.append(str(val) if val is not None else "null")
+                else:
+                    result_pieces.append(item)
+            return "".join(result_pieces)
+
+
         elif nodetype == "IdentifierNode":
             return env.get(node.name, node.line)
 

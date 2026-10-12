@@ -4,6 +4,7 @@ TOKEN_TYPES = [
     ("COMMENT",        r"(#|//).*"),
     ("WHITESPACE",     r"[ \t\r\n]+"),
     ("NUMBER",         r"\d+(\.\d+)?"),
+    ("FSTRING",        r'f("([^"\\]|\\.)*"|\'([^\'\\]|\\.)*\')'),
     ("STRING",         r'("([^"\\]|\\.)*"|\'([^\'\\]|\\.)*\')'),
     ("KEYWORD",        r"\b(let|say|print|if|else|while|for|in|fn|return|import|load|use|true|false|null|and|or|not|try|catch|throw|class|new|this|break|continue)\b"),
     ("IDENTIFIER",     r"[a-zA-Z_][a-zA-Z0-9_]*"),
@@ -72,6 +73,10 @@ class Lexer:
                             self.col = len(val) - val.rfind('\n')
                         else:
                             self.col += len(val)
+                    elif token_type == "FSTRING":
+                        raw_str = val[2:-1].encode('utf-8').decode('unicode_escape')
+                        self.tokens.append(Token("FSTRING", raw_str, self.line, self.col))
+                        self.col += len(val)
                     elif token_type == "STRING":
                         raw_str = val[1:-1].encode('utf-8').decode('unicode_escape')
                         self.tokens.append(Token("STRING", raw_str, self.line, self.col))
