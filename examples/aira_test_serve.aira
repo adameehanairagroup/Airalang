@@ -1,0 +1,12 @@
+import "serve";
+
+serve.route("/api/hello", fn(req) {
+    return {
+        "status": "ok",
+        "message": "Hello from AiraLang Web Engine!",
+        "client_path": req["path"]
+    };
+});
+
+# Start HTTP server on port 8080
+serve.start(8080);
