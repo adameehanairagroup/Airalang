@@ -415,6 +415,12 @@ AIRA_DEFAULT_SYSTEM_PROMPT = (
 )
 
 WORLD_AI_PROVIDERS = {
+    "argon": {
+        "name": "Google Gemini 4 Argon (Reasoning Flagship)",
+        "type": "gemini",
+        "default_model": "gemini-4-argon",
+        "env_var": "GEMINI_API_KEY"
+    },
     "gemini": {
         "name": "Google Gemini",
         "type": "gemini",
@@ -891,6 +897,7 @@ def create_ai_module():
         "system": set_system,
         "providers": list_providers,
         "groq": groq,
+        "argon": lambda prompt, model="gemini-4-argon", key=None: ask(prompt, model=model, key=key, provider="gemini"),
         "gemini": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="gemini"),
         "openai": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="openai"),
         "deepseek": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="deepseek"),
