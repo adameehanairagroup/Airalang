@@ -69,6 +69,8 @@ while true{
     let replay = ai.ask(user_input);
     say "Aira : " + replay;
 }
+```
+
 
 
 ### 1. Smart Auto-Routing
@@ -79,6 +81,7 @@ import "ai";
 ai.set_key("sk-or-v1-YOUR_KEY");
 say ai.ask("Explain quantum encryption");
 ```
+
 
 ### 2. DeepSeek AI
 ```aira
