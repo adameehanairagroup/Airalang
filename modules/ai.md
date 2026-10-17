@@ -49,6 +49,28 @@ import "ai";
 
 ## Examples
 
+### example
+```aira
+import "ai";
+
+ai.set_key("YOUR_API_KEY");
+ai.set_provider("PROVIDER","MODEL");
+
+while true{
+    let user_input = input("Ask to AI  : ");
+
+    //EXIT CONTION
+    if user_input == "exit" {
+        say "Goood bye take care";
+        break;
+    }
+
+    //ai call
+    let replay = ai.ask(user_input);
+    say "Aira : " + replay;
+}
+
+
 ### 1. Smart Auto-Routing
 ```aira
 import "ai";
