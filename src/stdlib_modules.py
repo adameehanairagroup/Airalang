@@ -675,6 +675,8 @@ def create_ai_module():
 
     def set_provider(provider, key=None, model=None):
         p = str(provider).lower().strip()
+        if p == "claude":
+            p = "anthropic"
         if p in WORLD_AI_PROVIDERS or p == "custom":
             state["active_provider"] = p
             if key:
@@ -903,6 +905,7 @@ def create_ai_module():
         "deepseek": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="deepseek"),
         "openrouter": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="openrouter"),
         "anthropic": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="anthropic"),
+        "claude": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="anthropic"),
         "mistral": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="mistral"),
         "ollama": lambda prompt, model=None: ask(prompt, model=model, provider="ollama"),
         "together": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="together"),
