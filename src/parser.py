@@ -57,26 +57,34 @@ class Parser:
             unique_lines = sorted(set(self.missing_semicolon_lines))
             lines_str = ", ".join(str(l) for l in unique_lines)
 
-            CYAN = "\033[1;36m"
-            YELLOW = "\033[1;33m"
-            MAGENTA = "\033[1;35m"
+            RED = "\033[1;31m"
             RESET = "\033[0m"
-            BOLD = "\033[1m"
 
-            ai_tag = ""
+            single_notice = None
             try:
-                from stdlib_modules import _GLOBAL_AI_STATE
-                has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k != "ollama" and v)
-                if has_key:
-                    active_p = _GLOBAL_AI_STATE.get("active_provider", "ai").upper()
-                    ai_tag = f" [{active_p}]"
+                import urllib.request, json
+                req_data = json.dumps({
+                    "model": "aira-3-flash",
+                    "messages": [
+                        {"role": "system", "content": f"You are Aira, a sovereign pair programmer co-pilot. In exactly 1 casual, developer-to-developer sentence in pure English (NO emojis, NO stickers, starting with '⚠ '), tell the user that they missed a semicolon at line {lines_str} and that you have automatically fixed it for them."},
+                        {"role": "user", "content": "Semicolon missed"}
+                    ],
+                    "max_tokens": 40
+                }).encode("utf-8")
+                req = urllib.request.Request("http://127.0.0.1:8080/v1/chat/completions", data=req_data, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=1.2) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    msg = data["choices"][0]["message"]["content"].strip().strip('"').strip("'")
+                    if msg:
+                        if not msg.startswith("⚠"):
+                            msg = f"⚠ {msg}"
+                        single_notice = f"\n{RED}{msg}{RESET}\n"
             except Exception:
                 pass
 
-            single_notice = (
-                f"\n{CYAN}✨ [Aira Auto-Fix{ai_tag}]:{RESET} {YELLOW}Hey there! Semicolon (;) missed at line {lines_str}.{RESET} "
-                f"I've put it automatically into your code — relax & enjoy coding! {MAGENTA}💻✨🚀{RESET}\n"
-            )
+            if not single_notice:
+                single_notice = f"\n{RED}⚠ Airalang automated bots detected your missed semicolon at line {lines_str}. We have automatically fixed it.{RESET}\n"
+
             sys.stderr.write(single_notice)
             sys.stderr.flush()
 
@@ -92,7 +100,27 @@ class Parser:
         if tok.type == "LBRACE":
             return self.parse_block_or_statement()
 
-        # import / load / use statement: `import os;`, `import "math";`, `import "helper.aira";`
+        # In-code @airaai directive: `@airaai "prompt"`, `@airaai/"prompt"`
+        if tok.type == "AT":
+            peek_tok = self.peek(1)
+            if peek_tok.type == "IDENTIFIER" and peek_tok.value in ("airaai", "aira"):
+                self.pos += 2  # consume '@' and 'airaai'
+                if self.match("DIV"):
+                    pass
+                prompt_text = ""
+                if self.current().type in ("STRING", "FSTRING"):
+                    prompt_text = str(self.current().value)
+                    self.pos += 1
+                else:
+                    tokens_text = []
+                    while self.current().type not in ("SEMICOLON", "EOF") and self.current().line == tok.line:
+                        tokens_text.append(str(self.current().value))
+                        self.pos += 1
+                    prompt_text = " ".join(tokens_text).strip()
+                self.consume_semicolon(tok.line)
+                return AiraAiDirectiveNode(prompt_text, tok.line)
+
+        # import / load / use statement: `import "ai" from "airaai";`, `import os;`, `import "math";`
         if tok.type in ("IMPORT", "LOAD", "USE"):
             self.pos += 1
             if self.current().type in ("STRING", "IDENTIFIER"):
@@ -101,8 +129,28 @@ class Parser:
             else:
                 curr = self.current()
                 raise SyntaxError(f"AiraLang SyntaxError: Expected module name or string after '{tok.value}' at line {curr.line}, col {curr.col}")
+
+            source_pkg = None
+            alias = None
+            # Check for `from <source>`
+            if self.current().type in ("FROM", "IDENTIFIER") and self.current().value == "from":
+                self.pos += 1
+                if self.current().type in ("STRING", "IDENTIFIER"):
+                    source_pkg = str(self.current().value)
+                    self.pos += 1
+                else:
+                    curr = self.current()
+                    raise SyntaxError(f"AiraLang SyntaxError: Expected package name after 'from' at line {curr.line}, col {curr.col}")
+
+            # Check for `as <alias>`
+            if self.current().type == "IDENTIFIER" and self.current().value == "as":
+                self.pos += 1
+                if self.current().type == "IDENTIFIER":
+                    alias = str(self.current().value)
+                    self.pos += 1
+
             self.consume_semicolon(tok.line)
-            return ImportStatementNode(str(mod_tok.value), tok.line)
+            return ImportStatementNode(str(mod_tok.value), tok.line, source=source_pkg, alias=alias)
 
         # say / print statement: `say "A", "B", 10;`
         if tok.type in ("SAY", "PRINT"):

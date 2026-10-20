@@ -6,8 +6,15 @@ class ProgramNode(ASTNode):
         self.statements = statements
 
 class ImportStatementNode(ASTNode):
-    def __init__(self, module_name, line):
+    def __init__(self, module_name, line, source=None, alias=None):
         self.module_name = module_name
+        self.line = line
+        self.source = source
+        self.alias = alias
+
+class AiraAiDirectiveNode(ASTNode):
+    def __init__(self, prompt, line):
+        self.prompt = prompt
         self.line = line
 
 class SayStatementNode(ASTNode):

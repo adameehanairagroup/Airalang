@@ -4,15 +4,16 @@
 
 <h1 align="center">AiraLang</h1>
 <p align="center">
-  <strong><em>Code the Higher Tomorrow</em></strong><br>
-  The High-Performance, Expressive & Modular Scripting Language for Creators, AI & Cybersecurity Engineers<br>
+  <strong><em>The World's First True AI-Native Programming Language</em></strong><br>
+  Engineered from Scratch with Native In-Code AI Directives, Zero-Key Sovereign Swarm Intelligence, Self-Healing AST & Deep Cyber Automation<br>
   <strong>Creator & Systems Architect:</strong> Adam Eehan (Founder & CEO, Aira Group of Technology) 👑
 </p>
 
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=AiraGroupOfTechnology.airalang"><img src="https://img.shields.io/badge/VS_Code_Marketplace-AiraLang-007ACC?logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
   <a href="./releases/AiraLang-Studio.apk"><img src="https://img.shields.io/badge/Android_APK-AiraLang_Studio-3DDC84?logo=android&logoColor=white" alt="Android APK"></a>
-  <img src="https://img.shields.io/badge/Version-v1.5.0-brightgreen" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.6.0--AI--Native-brightgreen" alt="Version">
+  <img src="https://img.shields.io/badge/AI--Core-Aira%20Sovereign%20Swarm-orange" alt="AI Core">
   <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20Termux%20%7C%20Android-blue" alt="OS">
   <img src="https://img.shields.io/badge/License-MIT-purple.svg" alt="License">
 </p>
@@ -21,7 +22,14 @@
 ---
 
 ## ⚡ Introduction
-`AiraLang` is an open-source, dynamic, and expressive scripting language engineered from scratch with a focus on simplicity, developer freedom, high speed, native AI integrations, cross-platform host telemetry, and advanced systems/cybersecurity capabilities. Runs natively across **Linux, Termux, Windows, and macOS**.
+`AiraLang` is an open-source, dynamic, and expressive programming language engineered from scratch as the **World's First True AI-Native Language**. Unlike traditional languages where AI is an external library requiring API keys and complex boilerplate, AiraLang embeds sovereign intelligence directly into the syntax, parser, runtime, and standard library.
+
+### 🌟 Core AI-Native Innovations
+* 🧠 **In-Code AI Directives (`@airaai`):** Run contextual static & runtime AI checks or queries straight from within your source code (`@airaai "any errors?"` or `@airaai/"explain this"`).
+* ⚡ **Zero-Key Sovereign AI Engine:** Out-of-the-box access to `airagroup/*` (`aira-3-flash`, `aira-3-coder`, `aira-3-swarm`) with **zero API keys, zero credit cards, and zero billing**.
+* 🛠️ **Self-Healing AST & Clean Error Doctor:** Missing a semicolon? Aira auto-fixes it in memory and notifies you cleanly in red without breaking your workflow.
+* 📦 **Universal Modern Module System:** Full support for `import "ai" from "airaai";`, standard library aliases, and multi-file project architecture.
+* 📱 **Runs Everywhere:** Native support for Termux, Android (AiraLang Studio APK), Linux, Windows, and macOS.
 
 ---
 
@@ -275,26 +283,49 @@ say f"Welcome back, {name}! Your security audit score is {score + 5}/100.";
 ## 📦 Standard Library Modules
 > 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 22 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
 
-### 🤖 Universal AI Integration Engine (`ai`)
-Directly integrate Generative AI from ANY provider in the world natively in AiraLang (OpenAI, DeepSeek, Anthropic Claude, Google Gemini, Groq, OpenRouter, Mistral, Ollama, Perplexity, Cerebras, or custom servers):
+### 🤖 Universal AI Integration Engine (`ai` / `airaai`)
+AiraLang is the world's first programming language with native sovereign AI baked directly into its standard library. It offers zero-key out-of-the-box execution via Aira Group's decentralized sovereign swarm, as well as universal multi-provider connectivity:
+
 ```aira
-import "ai";
+import "ai" from "airaai";
 
-# 1. Automatic Key Prefix Detection (Groq, OpenRouter, Claude, Cerebras, Gemini, etc.)
-ai.set_key("gsk_YOUR_GROQ_KEY");
-say ai.ask("Explain cyber security defensive postures");
+# 1. Zero-Key Out-Of-The-Box Sovereign AI (Aira Group of Technology)
+ai.set_provider("airagroup/aira-3-flash");
+let response = ai.ask("Explain quantum computing in 2 lines");
+say response;
 
-# 2. Explicit Provider Selection (DeepSeek, OpenAI, Mistral, etc.)
-ai.set_provider("deepseek", "sk-YOUR_DEEPSEEK_KEY");
+# 2. In-Code AI Directives (@airaai)
+# Evaluates code context at runtime: Green if clean, Red with ⚠ if issues detected!
+@airaai/"any errors?"
+
+# 3. Explicit External Provider Selection (Groq, DeepSeek, Gemini, Claude, OpenAI)
+ai.set_provider("groq", "gsk_YOUR_GROQ_KEY");
 say ai.ask("Optimize this sorting algorithm");
 
-# 3. 100% Offline Local AI with Ollama (Termux / PC)
+# 4. 100% Offline Local AI with Ollama (Termux / PC)
 ai.set_provider("ollama", model="llama3.2");
 say ai.ask("Local offline AI query");
 
-# 4. Custom Enterprise Server (vLLM, LM Studio, Localhost)
-ai.set_endpoint("http://localhost:8000/v1/chat/completions", "token", "my-model");
+# 5. Custom Enterprise Server (vLLM, LM Studio, Localhost)
+ai.set_endpoint("http://localhost:8080/v1/chat/completions", "token", "my-model");
 ```
+
+---
+
+### 🧠 In-Code AI Inspection Directives (`@airaai`)
+Never leave your code to ask AI for code reviews or debugging! Place `@airaai` directives anywhere in your script:
+```aira
+let users = ["Alice", "Bob"];
+
+// Direct code review directive
+@airaai "any errors?"
+
+// Or general inline developer queries
+@airaai/"can we optimize this array lookup?"
+```
+* **Clean Code:** Prints `✔ Code is perfectly alright! Syntax and runtime environment verified.` in bright green.
+* **Bug / Error Detected:** Prints clean red `⚠` warning explaining the issue and where the suggested fix applies.
+* **Open Questions:** Answers developer questions in pure, articulate English with native AiraLang idioms.
 
 ### 📱 Native Android Security & Inspection Engine (`android` / `droidsec`)
 Engineered natively for mobile penetration testing, device hardening, and zero-dependency static APK security auditing directly on Termux & Android:

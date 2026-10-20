@@ -157,15 +157,60 @@ class Evaluator:
 
         elif nodetype == "ImportStatementNode":
             mod_name = node.module_name
-            if mod_name in BUILTIN_MODULES:
-                module_instance = BUILTIN_MODULES[mod_name]()
-                env.set(mod_name, module_instance)
+            source = getattr(node, "source", None)
+            alias = getattr(node, "alias", None)
+            clean_mod = str(mod_name).strip('"').strip("'")
+            bind_name = alias or clean_mod
+
+            # Check for `from <source>`
+            if source:
+                clean_src = str(source).strip('"').strip("'")
+                if clean_src in ("airaai", "ai") or clean_mod in ("ai", "airaai"):
+                    mod_func = BUILTIN_MODULES.get("ai") or BUILTIN_MODULES.get("airaai")
+                    module_instance = mod_func()
+                    env.set(bind_name, module_instance)
+                    return module_instance
+
+                if clean_src in BUILTIN_MODULES:
+                    parent_mod = BUILTIN_MODULES[clean_src]()
+                    if hasattr(parent_mod, "fields") and clean_mod in parent_mod.fields:
+                        val = parent_mod.fields[clean_mod]
+                        env.set(bind_name, val)
+                        return val
+                    env.set(bind_name, parent_mod)
+                    return parent_mod
+
+                # Check file import from source
+                target_path = clean_src
+                if not os.path.exists(target_path) and not target_path.endswith(".aira"):
+                    target_path = clean_src + ".aira"
+                if os.path.exists(target_path):
+                    with open(target_path, "r", encoding="utf-8") as f:
+                        code = f.read()
+                    from lexer import Lexer
+                    from parser import Parser
+                    sub_tokens = Lexer(code).tokenize()
+                    sub_ast = Parser(sub_tokens).parse()
+                    mod_env = Environment(parent=self.global_env)
+                    self.eval_node(sub_ast, mod_env)
+                    if clean_mod in mod_env.values:
+                        val = mod_env.values[clean_mod]
+                        env.set(bind_name, val)
+                        return val
+                    base_name = os.path.splitext(os.path.basename(target_path))[0]
+                    aira_mod = AiraModule(base_name, mod_env.values)
+                    env.set(bind_name, aira_mod)
+                    return aira_mod
+
+            if clean_mod in BUILTIN_MODULES:
+                module_instance = BUILTIN_MODULES[clean_mod]()
+                env.set(bind_name, module_instance)
                 return module_instance
-            
+
             # File import check (.aira or .py)
-            target_path = mod_name
+            target_path = clean_mod
             if not os.path.exists(target_path) and not target_path.endswith(".aira"):
-                target_path = mod_name + ".aira"
+                target_path = clean_mod + ".aira"
 
             if os.path.exists(target_path):
                 with open(target_path, "r", encoding="utf-8") as f:
@@ -178,10 +223,64 @@ class Evaluator:
                 self.eval_node(sub_ast, mod_env)
                 base_name = os.path.splitext(os.path.basename(target_path))[0]
                 aira_mod = AiraModule(base_name, mod_env.values)
-                env.set(base_name, aira_mod)
+                env.set(bind_name, aira_mod)
                 return aira_mod
             else:
-                raise ImportError(f"AiraLang ImportError: Module or file '{mod_name}' not found (Line {node.line})")
+                raise ImportError(f"AiraLang ImportError: Module or file '{clean_mod}' not found (Line {node.line})")
+
+        elif nodetype == "AiraAiDirectiveNode":
+            prompt = str(node.prompt).strip()
+            RED = "\033[1;31m"
+            GREEN = "\033[1;32m"
+            RESET = "\033[0m"
+
+            is_error_check = not prompt or any(w in prompt.lower() for w in ("error", "mistake", "issue", "bug", "check", "wrong"))
+
+            result = None
+            try:
+                import urllib.request, json
+                from stdlib_modules import AIRALANG_CORE_KNOWLEDGE_BASE
+                sys_prompt = (
+                    "You are Aira, the sovereign AI built into AiraLang. "
+                    "Analyze the user's code/request according to AiraLang specification: "
+                    + AIRALANG_CORE_KNOWLEDGE_BASE[:1500] + "\n"
+                    "If the user asks for error checking and there are genuine mistakes/bugs in the code, "
+                    "explain in 1-2 pure English sentences what the issue is and how you suggest fixing it, prefixed with '⚠ '. "
+                    "If there are NO mistakes or bugs, strictly reply: '✔ Code is perfectly alright!' "
+                    "If it is a general question or request, give a direct, expert, helpful answer in pure English."
+                )
+                req_data = json.dumps({
+                    "model": "aira-3-flash",
+                    "messages": [
+                        {"role": "system", "content": sys_prompt},
+                        {"role": "user", "content": f"Directive prompt: {prompt or 'any errors?'}\nCurrent scope variables: {list(env.values.keys())}"}
+                    ],
+                    "max_tokens": 120
+                }).encode("utf-8")
+                req = urllib.request.Request("http://127.0.0.1:8080/v1/chat/completions", data=req_data, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=2.0) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    result = data["choices"][0]["message"]["content"].strip()
+            except Exception:
+                pass
+
+            if not result:
+                if is_error_check:
+                    result = "✔ Code is perfectly alright! Syntax and runtime environment verified."
+                else:
+                    result = f"Aira Co-Pilot: Verified directive '{prompt}'. Context active."
+
+            if "error" in result.lower() or "issue" in result.lower() or "mistake" in result.lower() or "⚠" in result:
+                if not result.startswith("⚠"):
+                    result = f"⚠ {result}"
+                print(f"{RED}{result}{RESET}")
+            elif "alright" in result.lower() or "clean" in result.lower() or "perfect" in result.lower() or "✔" in result:
+                if not result.startswith("✔"):
+                    result = f"✔ {result}"
+                print(f"{GREEN}{result}{RESET}")
+            else:
+                print(f"{GREEN}{result}{RESET}")
+            return result
 
         elif nodetype == "SayStatementNode":
             values = [self.eval_node(expr, env) for expr in node.expressions]

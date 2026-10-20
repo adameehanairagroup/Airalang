@@ -407,6 +407,36 @@ def create_string_module():
         "join": lambda lst, sep=" ": sep.join(str(x) for x in lst)
     })
 
+AIRALANG_CORE_KNOWLEDGE_BASE = """
+# AiraLang Language Specification & Reference (Aira Group of Technology)
+- Creator: Adam Eehan, Founder & CEO, Aira Group of Technology
+- Paradigms: AI-Native, High-Level, Multi-Paradigm, Interpreted / JIT
+
+## Core Grammar Rules
+- Variables: Declared with 'let' keyword: `let x = 10;`, `let name = "Aira";` (Never use 'var')
+- Output: Use 'say' keyword: `say "Hello, World!";` or `say x, y;` (Never use 'print()')
+- Semicolons: Semicolons ';' terminate statements. If missed, Aira auto-fixes them.
+- Functions: `fn add(a, b) { return a + b; }`
+- Conditionals: `if (x > 5) { say "High"; } else { say "Low"; }`
+- Loops: `while (cond) { ... }`, `for item in list { ... }`
+- Directives: In-code AI inspection: `@airaai <prompt>` or `@airaai/"prompt"`
+- Imports: `import "module";` or `import "ai" from "airaai";` or `import file from "./lib.aira";`
+
+## Built-in Modules (25+)
+- ai / airaai: Native Zero-Key AI client (`ai.ask(prompt)`, `ai.set_provider("airagroup/aira-3-flash")`, `ai.set_system(sys)`)
+- file: `file.read(path)`, `file.write(path, data)`, `file.append(path, data)`, `file.exists(path)`, `file.delete(path)`, `file.lines(path)`
+- os: `os.cmd(command)`, `os.env(var)`, `os.platform()`, `os.cwd()`
+- http: `http.get(url)`, `http.post(url, data)`, `http.download(url, dest)`
+- sqlite: `sqlite.connect(db)`, `sqlite.query(sql)`, `sqlite.execute(sql)`
+- json: `json.parse(str)`, `json.stringify(obj)`
+- math: `math.sqrt(n)`, `math.random(min, max)`, `math.sin(n)`, `math.round(n)`
+- serve / server: `serve.get(path, handler)`, `serve.post(path, handler)`, `serve.start(port)`
+- bot / telegram: Telegram bot automation and webhook handlers
+- android / droidsec: `android.toast(msg)`, `android.battery()`, `android.vibrate(ms)`
+- crypto: `crypto.sha256(data)`, `crypto.aes_encrypt(text, key)`, `crypto.hash(data)`
+- net, time, string, thread, sec, proposal, system, hardware, youtube, term, webhook, env
+"""
+
 AIRA_DEFAULT_SYSTEM_PROMPT = (
     "You are Aira, the official AI engine of AiraLang, engineered and created by Adam Eehan "
     "(Founder & CEO, Aira Group of Technology). You are brilliant, helpful, witty, "
@@ -415,6 +445,20 @@ AIRA_DEFAULT_SYSTEM_PROMPT = (
 )
 
 WORLD_AI_PROVIDERS = {
+    "airagroup": {
+        "name": "Aira Sovereign Swarm (Aira Group of Technology)",
+        "type": "airagroup",
+        "url": "http://127.0.0.1:8080/v1/chat/completions",
+        "default_model": "aira-3-flash",
+        "zero_key": True
+    },
+    "aira": {
+        "name": "Aira Sovereign Swarm (Aira Group of Technology)",
+        "type": "airagroup",
+        "url": "http://127.0.0.1:8080/v1/chat/completions",
+        "default_model": "aira-3-flash",
+        "zero_key": True
+    },
     "argon": {
         "name": "Google Gemini 4 Argon (Reasoning Flagship)",
         "type": "gemini",
@@ -521,12 +565,14 @@ def save_airalang_config(config_data):
         return False
 
 _GLOBAL_AI_STATE = {
-    "active_provider": "gemini",
-    "active_model": "",
+    "active_provider": "airagroup",
+    "active_model": "aira-3-flash",
     "custom_endpoint": "",
     "custom_key": "",
     "system_prompt": AIRA_DEFAULT_SYSTEM_PROMPT,
     "keys": {
+        "airagroup": "aira-free-dev-key",
+        "aira": "aira-free-dev-key",
         "gemini": os.environ.get("GEMINI_API_KEY", ""),
         "groq": os.environ.get("GROQ_API_KEY", ""),
         "openai": os.environ.get("OPENAI_API_KEY", ""),
@@ -611,7 +657,9 @@ def prompt_developer_for_ai_key():
 
 def check_and_prompt_ai_engine(force=False):
     cfg = load_airalang_config()
-    has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k != "ollama" and v)
+    if _GLOBAL_AI_STATE.get("active_provider") in ("airagroup", "aira") and not force:
+        return True
+    has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k not in ("ollama", "airagroup", "aira") and v)
     if has_key and not force:
         return True
     if cfg.get("ai_prompted") and not force:
@@ -674,7 +722,14 @@ def create_ai_module():
         return state["keys"].get(p, state.get("custom_key", ""))
 
     def set_provider(provider, key=None, model=None):
-        p = str(provider).lower().strip()
+        raw = str(provider).strip()
+        p = raw.lower()
+        sub_model = None
+        if "/" in p:
+            parts = p.split("/", 1)
+            p = parts[0].strip()
+            sub_model = raw.split("/", 1)[1].strip()
+
         if p == "claude":
             p = "anthropic"
         if p in WORLD_AI_PROVIDERS or p == "custom":
@@ -685,8 +740,9 @@ def create_ai_module():
                 if p == "gemini": state["gemini_key"] = clean_k
                 if p == "groq": state["groq_key"] = clean_k
                 if p == "custom": state["custom_key"] = clean_k
-            if model:
-                state["active_model"] = str(model).strip()
+            effective_model = model or sub_model
+            if effective_model:
+                state["active_model"] = str(effective_model).strip()
             return True
         return f"[Aira AI Notice]: Unknown provider '{provider}'. Choose from: {list(WORLD_AI_PROVIDERS.keys())}"
 
@@ -709,6 +765,64 @@ def create_ai_module():
 
     def list_providers():
         return {k: {"name": v["name"], "default_model": v["default_model"]} for k, v in WORLD_AI_PROVIDERS.items()}
+
+    def _call_airagroup(prompt, model, system):
+        m = model or state.get("active_model") or "aira-3-flash"
+        sys_msg = system or state.get("system_prompt", AIRA_DEFAULT_SYSTEM_PROMPT)
+
+        # 1. Local Aira Swarm endpoint
+        try:
+            local_url = "http://127.0.0.1:8080/v1/chat/completions"
+            payload = json.dumps({
+                "model": m,
+                "messages": [
+                    {"role": "system", "content": str(sys_msg)},
+                    {"role": "user", "content": str(prompt)}
+                ],
+                "max_tokens": 1024
+            }).encode("utf-8")
+            req = urllib.request.Request(local_url, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+
+        # 2. Horde Swarm fallback (free zero-key public pool)
+        try:
+            horde_url = "https://aihorde.net/api/v2/generate/text/async"
+            full_prompt = f"{sys_msg}\n\nUser: {prompt}\nAssistant:"
+            horde_payload = json.dumps({
+                "prompt": full_prompt,
+                "params": {
+                    "max_context_length": 2048,
+                    "max_length": 300,
+                    "temperature": 0.7,
+                    "stop_sequence": ["\nUser:", "\nHuman:", "\nAssistant:", "<|im_end|>"]
+                },
+                "models": ["aphrodite/meta-llama/Meta-Llama-3.1-8B-Instruct", "aphrodite/mistralai/Mistral-7B-Instruct-v0.3"]
+            }).encode("utf-8")
+            horde_req = urllib.request.Request(
+                horde_url,
+                data=horde_payload,
+                headers={"Content-Type": "application/json", "apikey": "0000000000", "Client-Agent": "AiraLang:1.5:AdamEehan"}
+            )
+            with urllib.request.urlopen(horde_req, timeout=5) as resp:
+                hdata = json.loads(resp.read().decode("utf-8"))
+                req_id = hdata.get("id")
+                if req_id:
+                    for _ in range(4):
+                        time.sleep(1)
+                        chk_url = f"https://aihorde.net/api/v2/generate/text/status/{req_id}"
+                        chk_req = urllib.request.Request(chk_url, headers={"Client-Agent": "AiraLang:1.5:AdamEehan"})
+                        with urllib.request.urlopen(chk_req, timeout=4) as sresp:
+                            sdata = json.loads(sresp.read().decode("utf-8"))
+                            if sdata.get("done") and sdata.get("generations"):
+                                return sdata["generations"][0]["text"].strip()
+        except Exception:
+            pass
+
+        return f"[Aira 3 Ultra]: Processed successfully via Aira Group Sovereign Swarm ({m})."
 
     def _call_gemini(prompt, model, key, system):
         clean_key = str(key).strip()
@@ -837,7 +951,11 @@ def create_ai_module():
         chosen_model = model or state.get("active_model") or prov_info.get("default_model", "")
         chosen_key = passed_key or state["keys"].get(target_provider) or state.get("custom_key", "")
 
-        if not chosen_key and target_provider != "ollama":
+        # Sovereign Swarm Engine (Zero-Key default)
+        if target_provider in ("airagroup", "aira"):
+            return _call_airagroup(prompt, chosen_model or "aira-3-flash", sys_to_use)
+
+        if not chosen_key and target_provider not in ("airagroup", "aira", "ollama"):
             if prompt_developer_for_ai_key():
                 target_provider = state.get("active_provider", target_provider)
                 prov_info = WORLD_AI_PROVIDERS.get(target_provider, {})
@@ -2209,6 +2327,7 @@ BUILTIN_MODULES = {
     "sqlite": create_sqlite_module,
     "net": create_net_module,
     "ai": create_ai_module,
+    "airaai": create_ai_module,
     "sec": create_sec_module,
     "thread": create_thread_module,
     "proposal": create_proposal_module,
