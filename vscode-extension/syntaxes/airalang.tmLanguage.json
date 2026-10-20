@@ -4,6 +4,7 @@
   "scopeName": "source.aira",
   "patterns": [
     { "include": "#comments" },
+    { "include": "#directives" },
     { "include": "#strings" },
     { "include": "#numbers" },
     { "include": "#keywords" },
@@ -12,6 +13,14 @@
     { "include": "#functions" }
   ],
   "repository": {
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.aira",
+          "match": "(@airaai|@aira)"
+        }
+      ]
+    },
     "comments": {
       "patterns": [
         {
@@ -71,7 +80,7 @@
         },
         {
           "name": "keyword.declaration.aira",
-          "match": "\\b(let|fn|class|new|import)\\b"
+          "match": "\\b(let|fn|class|new|import|from)\\b"
         },
         {
           "name": "keyword.other.say.aira",

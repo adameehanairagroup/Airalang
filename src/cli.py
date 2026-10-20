@@ -40,6 +40,7 @@ ASCII_BANNER = f"""\033[1;36m
  \033[1;32m[+]\033[0m \033[1;37mEngine:\033[0m AiraLang v{VERSION}
  \033[1;34m[*]\033[0m \033[1;37mCreator:\033[0m {AUTHOR}
  \033[1;35m[⚡]\033[0m \033[1;37mModules:\033[0m serve, term, webhook, bot, env, sec, ai, crypto, sqlite
+ \033[1;36m[💡]\033[0m \033[1;37mAI Copilot:\033[0m Type \033[1;36m@aira <question>\033[0m or \033[1;36m?<question>\033[0m in REPL for instant help.
  \033[1;33m[!]\033[0m Multiline support: open \033[1;32m{{\033[0m will continue on next line.
  \033[1;33m[!]\033[0m Type \033[1;31m'exit'\033[0m or \033[1;31m'quit'\033[0m to close REPL.
 \033[1;30m---------------------------------------------------\033[0m
@@ -132,6 +133,57 @@ def auto_insert_semicolons_into_file(filepath, lines_to_fix):
     except Exception:
         pass
 
+def aira_explain_error(error, source_code, filepath=None):
+    err_str = str(error)
+    RED = "\033[1;31m"
+    RESET = "\033[0m"
+
+    print(f"\n{RED}⚠ AiraLang Compiler Error: {err_str}{RESET}")
+
+    explanation = None
+    try:
+        import urllib.request, json
+        from stdlib_modules import AIRALANG_CORE_KNOWLEDGE_BASE
+        sys_prompt = (
+            "You are Aira, sovereign AI engine of AiraLang. "
+            "A developer encountered an error in their AiraLang code. "
+            "In 1-2 direct, friendly, and expert sentences in pure English (starting with '⚠ Why this happened: '), "
+            "explain why this error occurred and tell them exactly how to fix it in AiraLang. "
+            "Rules: Variables use 'let' (NOT 'var'), output uses 'say' (NOT 'print'). "
+            "Knowledge Base: " + AIRALANG_CORE_KNOWLEDGE_BASE[:1000]
+        )
+        req_data = json.dumps({
+            "model": "aira-3-flash",
+            "messages": [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": f"Source:\n{source_code[:1000]}\n\nError:\n{err_str}"}
+            ],
+            "max_tokens": 120
+        }).encode("utf-8")
+        req = urllib.request.Request("http://127.0.0.1:8080/v1/chat/completions", data=req_data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=1.8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            explanation = data["choices"][0]["message"]["content"].strip()
+    except Exception:
+        pass
+
+    if not explanation:
+        if "is not defined" in err_str:
+            var_name = err_str.split("'")[1] if "'" in err_str else "variable"
+            explanation = f"⚠ Why this happened: '{var_name}' was referenced before declaration. In AiraLang, declare it first with 'let {var_name} = ...;'."
+        elif "Missing block brace" in err_str or "Expected 'LBRACE'" in err_str:
+            explanation = "⚠ Why this happened: Control blocks (if, while, for) require braces '{ }' in AiraLang."
+        elif "var " in source_code:
+            explanation = "⚠ Why this happened: 'var' keyword is not recognized. In AiraLang, use 'let' to declare variables."
+        elif "print(" in source_code:
+            explanation = "⚠ Why this happened: 'print()' function is not recognized. In AiraLang, use 'say \"output\";'."
+        else:
+            explanation = "⚠ Why this happened: Syntax or runtime mismatch detected. Check statement syntax and variable scope."
+
+    if not explanation.startswith("⚠"):
+        explanation = f"⚠ {explanation}"
+    print(f"{RED}{explanation}{RESET}\n")
+
 def run_code(source_code, evaluator=None, filepath=None):
     if evaluator is None:
         evaluator = Evaluator()
@@ -144,13 +196,13 @@ def run_code(source_code, evaluator=None, filepath=None):
             auto_insert_semicolons_into_file(filepath, parser.missing_semicolon_lines)
         return evaluator.eval(ast)
     except SyntaxError as e:
-        print(f"\033[1;31m[!] SyntaxError:\033[0m {e}")
+        aira_explain_error(e, source_code, filepath)
     except NameError as e:
-        print(f"\033[1;31m[!] NameError:\033[0m {e}")
+        aira_explain_error(e, source_code, filepath)
     except TypeError as e:
-        print(f"\033[1;31m[!] TypeError:\033[0m {e}")
+        aira_explain_error(e, source_code, filepath)
     except Exception as e:
-        print(f"\033[1;31m[!] Error:\033[0m {e}")
+        aira_explain_error(e, source_code, filepath)
 
 def run_file(filepath):
     if not os.path.exists(filepath):
@@ -183,6 +235,48 @@ def start_repl():
                 prompt = "\033[1;33m[....]\033[0m \033[1;32m··\033[0m "
                 
             line = input(prompt)
+            clean_cmd = line.strip()
+
+            if not buffer and (clean_cmd.startswith("@aira") or clean_cmd.startswith("@airaai") or clean_cmd.startswith("?")):
+                query = clean_cmd
+                if clean_cmd.startswith("@airaai"):
+                    query = clean_cmd[7:].strip()
+                elif clean_cmd.startswith("@aira"):
+                    query = clean_cmd[5:].strip()
+                elif clean_cmd.startswith("?"):
+                    query = clean_cmd[1:].strip()
+
+                print(f"\033[1;36m[Aira Copilot]:\033[0m Thinking...")
+                reply = None
+                try:
+                    import urllib.request, json
+                    from stdlib_modules import AIRALANG_CORE_KNOWLEDGE_BASE
+                    sys_prompt = (
+                        "You are Aira, sovereign pair programmer and REPL copilot for AiraLang. "
+                        "Answer the developer's question directly with concise, correct AiraLang code examples in pure English. "
+                        "Rules: Use 'let' for variables (NOT 'var'), 'say' for output (NOT 'print'). "
+                        "AiraLang Knowledge Base: " + AIRALANG_CORE_KNOWLEDGE_BASE[:1500]
+                    )
+                    req_data = json.dumps({
+                        "model": "aira-3-flash",
+                        "messages": [
+                            {"role": "system", "content": sys_prompt},
+                            {"role": "user", "content": query}
+                        ],
+                        "max_tokens": 200
+                    }).encode("utf-8")
+                    req = urllib.request.Request("http://127.0.0.1:8080/v1/chat/completions", data=req_data, headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=3.0) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        reply = data["choices"][0]["message"]["content"].strip()
+                except Exception:
+                    pass
+
+                if not reply:
+                    reply = "Use 'let x = 10;' for variables, 'say x;' for output, and 'import <mod>;' for standard library modules."
+
+                print(f"\033[1;32m✔ Aira:\033[0m {reply}\n")
+                continue
             
             if not buffer and line.strip() in ("exit", "quit"):
                 print("\033[1;33m[*] Exiting AiraLang. Goodbye, Boss!\033[0m")
