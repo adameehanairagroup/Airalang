@@ -1,2 +1,2 @@
 @echo off
-python "C:\Users\ACER\Downloads\airas2\Airalang-main\src\cli.py" %*
+python "%~dp0..\src\cli.py" %*

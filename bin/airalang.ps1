@@ -1,1 +1,1 @@
-python "C:\Users\ACER\Downloads\airas2\Airalang-main\src\cli.py" @args
+& python "$PSScriptRoot\..\src\cli.py" $args

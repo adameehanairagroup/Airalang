@@ -1,11 +1,11 @@
 ; ==============================================================================
-; AiraLang v1.5.0 Official Windows Setup Wizard Script
+; AiraLang v1.6.0 Official Windows Setup Wizard Script
 ; Engineered by Adam Eehan (Aira Group of Technology)
 ; ==============================================================================
 
 Unicode true
-Name "AiraLang v1.5.0 (64-bit)"
-OutFile "/data/data/com.termux/files/home/airalang-website/downloads/AiraLang-Setup-v1.5.0.exe"
+Name "AiraLang v1.6.0 AI-Native (64-bit)"
+OutFile "/data/data/com.termux/files/home/airalang-website/downloads/AiraLang-Setup-v1.6.0.exe"
 InstallDir "$LOCALAPPDATA\Programs\AiraLang"
 InstallDirRegKey HKCU "Software\AiraLang" "Install_Dir"
 RequestExecutionLevel user
@@ -22,7 +22,7 @@ UninstPage uninstConfirm
 UninstPage instfiles
 
 LicenseData "LICENSE"
-LicenseText "Please review the license terms before installing AiraLang v1.5.0." "I Agree"
+LicenseText "Please review the license terms before installing AiraLang v1.6.0." "I Agree"
 
 ; ==============================================================================
 ; Sections
@@ -51,8 +51,8 @@ Section "AiraLang Core Engine (required)" SecCore
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
   ; Register in Windows Add/Remove Programs (Control Panel)
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "DisplayName" "AiraLang Programming Language v1.5.0"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "DisplayVersion" "1.5.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "DisplayName" "AiraLang Programming Language v1.6.0 (AI-Native)"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "DisplayVersion" "1.6.0"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "Publisher" "Adam Eehan (Aira Group of Technology)"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
@@ -63,7 +63,7 @@ Section "AiraLang Core Engine (required)" SecCore
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AiraLang" "NoRepair" 1
 SectionEnd
 
-Section "Standard Library (22 Modules)" SecModules
+Section "Standard Library (25 Modules)" SecModules
   SetOutPath "$INSTDIR\modules"
   File /r "modules\*.*"
 SectionEnd
