@@ -2,7 +2,7 @@
   "name": "airalang",
   "displayName": "AiraLang Language Support",
   "description": "Rich language support, syntax highlighting, and code snippets for AiraLang.",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "publisher": "AiraGroupOfTechnology",
   "icon": "icon.png",
   "main": "./extension.js",

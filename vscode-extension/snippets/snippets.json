@@ -74,5 +74,19 @@
       "say \"${2:Mee too!}\";"
     ],
     "description": "AiraLang Proposal prank timeout loop"
+  },
+  "Aira AI Directive": {
+    "prefix": "airaai",
+    "body": [
+      "@airaai ${1:write a function to reverse a string};"
+    ],
+    "description": "AiraLang AI compiler synthesis directive"
+  },
+  "From Import": {
+    "prefix": "from",
+    "body": [
+      "from ${1:math} import ${2:sqrt};"
+    ],
+    "description": "Selective import syntax in AiraLang"
   }
 }
