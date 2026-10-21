@@ -799,26 +799,33 @@ def create_ai_module():
                     "max_length": 300,
                     "temperature": 0.7,
                     "stop_sequence": ["\nUser:", "\nHuman:", "\nAssistant:", "<|im_end|>"]
-                },
-                "models": ["aphrodite/meta-llama/Meta-Llama-3.1-8B-Instruct", "aphrodite/mistralai/Mistral-7B-Instruct-v0.3"]
+                }
             }).encode("utf-8")
+            horde_headers = {
+                "Content-Type": "application/json",
+                "apikey": "0000000000",
+                "Client-Agent": "AiraLang:1.6:AdamEehan",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AiraLang/1.6"
+            }
             horde_req = urllib.request.Request(
                 horde_url,
                 data=horde_payload,
-                headers={"Content-Type": "application/json", "apikey": "0000000000", "Client-Agent": "AiraLang:1.5:AdamEehan"}
+                headers=horde_headers
             )
-            with urllib.request.urlopen(horde_req, timeout=5) as resp:
+            with urllib.request.urlopen(horde_req, timeout=10) as resp:
                 hdata = json.loads(resp.read().decode("utf-8"))
                 req_id = hdata.get("id")
                 if req_id:
-                    for _ in range(4):
+                    for _ in range(12):
                         time.sleep(1)
                         chk_url = f"https://aihorde.net/api/v2/generate/text/status/{req_id}"
-                        chk_req = urllib.request.Request(chk_url, headers={"Client-Agent": "AiraLang:1.5:AdamEehan"})
-                        with urllib.request.urlopen(chk_req, timeout=4) as sresp:
+                        chk_req = urllib.request.Request(chk_url, headers=horde_headers)
+                        with urllib.request.urlopen(chk_req, timeout=5) as sresp:
                             sdata = json.loads(sresp.read().decode("utf-8"))
                             if sdata.get("done") and sdata.get("generations"):
-                                return sdata["generations"][0]["text"].strip()
+                                gen_text = sdata["generations"][0]["text"].strip()
+                                if gen_text:
+                                    return gen_text
         except Exception:
             pass
 

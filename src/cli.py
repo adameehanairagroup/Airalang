@@ -26,7 +26,7 @@ from lexer import Lexer
 from parser import Parser
 from evaluator import Evaluator
 
-VERSION = "1.5.0 (Full-Stack Web, Cyber OSINT & F-Strings Edition)"
+VERSION = "1.6.0 (AI-Native Edition)"
 AUTHOR = "Adam Eehan (Aira Group of Technology)"
 
 ASCII_BANNER = f"""\033[1;36m
