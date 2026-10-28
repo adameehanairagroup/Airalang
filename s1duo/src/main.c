@@ -2,6 +2,7 @@
 #include "../include/lexer.h"
 #include "../include/parser.h"
 #include "../include/evaluator.h"
+#include "../include/elf_emitter.h"
 
 static void print_banner(void) {
     printf(COLOR_CYAN
@@ -114,10 +115,45 @@ int main(int argc, char** argv) {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         print_banner();
         printf("Usage:\n");
-        printf("  airalang3 <script.aira>    Execute AiraLang script with S1 Duo native engine\n");
-        printf("  airalang3 -c \"<code>\"       Execute inline AiraLang code string\n");
-        printf("  airalang3                  Start S1 Duo interactive REPL\n");
-        printf("  airalang3 -v, --version    Show engine version & security metadata\n");
+        printf("  airalang3 <script.aira>              Execute AiraLang script with S1 Duo native engine\n");
+        printf("  airalang3 -b <script.aira> -o <bin>  Compile directly to raw standalone ELF machine binary (0%% C, 0%% Python)\n");
+        printf("  airalang3 -c \"<code>\"                 Execute inline AiraLang code string\n");
+        printf("  airalang3                            Start S1 Duo interactive REPL\n");
+        printf("  airalang3 -v, --version              Show engine version & security metadata\n");
+        return 0;
+    }
+
+    if (strcmp(argv[1], "--emit-elf") == 0 || strcmp(argv[1], "-b") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, COLOR_RED "[!] Error: -b requires an input .aira file.\n" COLOR_RESET);
+            return 1;
+        }
+        const char* input_file = argv[2];
+        const char* output_file = "a.out";
+        for (int i = 3; i < argc; i++) {
+            if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
+                output_file = argv[i + 1];
+                break;
+            }
+        }
+        char* source = read_file_source(input_file);
+        Parser parser;
+        parser_init(&parser, source, input_file);
+        StmtNode* ast = parser_parse(&parser);
+
+        if (!parser.had_error && ast) {
+            ElfEmitter emitter;
+            elf_emitter_init(&emitter, ARCH_ARM64);
+            if (elf_emitter_compile_ast(&emitter, ast, output_file)) {
+                printf(COLOR_GREEN "[✓] Standalone Raw Machine-Code ELF Binary created:" COLOR_RESET " %s\n", output_file);
+                printf(COLOR_CYAN "[*] Zero Dependencies (0%% C, 0%% Python, Static Bare-Metal ELF)\n" COLOR_RESET);
+            } else {
+                fprintf(stderr, COLOR_RED "[!] Failed to emit ELF binary.\n" COLOR_RESET);
+            }
+            elf_emitter_free(&emitter);
+        }
+        stmt_free(ast);
+        aira_free(source);
         return 0;
     }
 

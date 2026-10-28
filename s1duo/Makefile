@@ -2,7 +2,7 @@ CC = clang
 CFLAGS = -O3 -Wall -Wextra -Wno-unused-parameter -Iinclude -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fPIE
 LDFLAGS = -pie -Wl,-z,relro,-z,now -lm
 
-SRCS = src/common.c src/lexer.c src/value.c src/ast.c src/parser.c src/env.c src/modules.c src/evaluator.c src/main.c
+SRCS = src/common.c src/lexer.c src/value.c src/ast.c src/parser.c src/env.c src/modules.c src/evaluator.c src/elf_emitter.c src/main.c
 OBJS = $(SRCS:.c=.o)
 TARGET = bin/airalang3
 INSTALL_DIR = /data/data/com.termux/files/usr/bin
