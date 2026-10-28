@@ -4,7 +4,7 @@ LDFLAGS = -pie -Wl,-z,relro,-z,now -lm
 
 SRCS = src/common.c src/lexer.c src/value.c src/ast.c src/parser.c src/env.c src/modules.c src/evaluator.c src/elf_emitter.c src/main.c
 OBJS = $(SRCS:.c=.o)
-TARGET = bin/airalang3
+TARGET = bin/airalang
 INSTALL_DIR = /data/data/com.termux/files/usr/bin
 
 all: $(TARGET)
@@ -19,9 +19,10 @@ $(TARGET): $(OBJS)
 
 install: $(TARGET)
 	@mkdir -p $(INSTALL_DIR)
+	cp $(TARGET) $(INSTALL_DIR)/airalang
 	cp $(TARGET) $(INSTALL_DIR)/airalang3
-	chmod 755 $(INSTALL_DIR)/airalang3
-	@echo "\033[1;32m[✓] Installed airalang3 to $(INSTALL_DIR)/airalang3\033[0m"
+	chmod 755 $(INSTALL_DIR)/airalang $(INSTALL_DIR)/airalang3
+	@echo "\033[1;32m[✓] Installed airalang and airalang3 to $(INSTALL_DIR)\033[0m"
 
 clean:
 	rm -rf src/*.o bin/

@@ -76,7 +76,7 @@ static void run_repl(void) {
 
     char line_buf[4096];
     for (;;) {
-        printf(COLOR_GREEN "aira3> " COLOR_RESET);
+        printf(COLOR_GREEN "airalang> " COLOR_RESET);
         fflush(stdout);
 
         if (!fgets(line_buf, sizeof(line_buf), stdin)) {
@@ -115,11 +115,11 @@ int main(int argc, char** argv) {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         print_banner();
         printf("Usage:\n");
-        printf("  airalang3 <script.aira>              Execute AiraLang script with S1 Duo native engine\n");
-        printf("  airalang3 -b <script.aira> -o <bin>  Compile directly to raw standalone ELF machine binary (0%% C, 0%% Python)\n");
-        printf("  airalang3 -c \"<code>\"                 Execute inline AiraLang code string\n");
-        printf("  airalang3                            Start S1 Duo interactive REPL\n");
-        printf("  airalang3 -v, --version              Show engine version & security metadata\n");
+        printf("  airalang <script.aira>              Execute AiraLang script with high-speed native engine\n");
+        printf("  airalang -b <script.aira> -o <bin>  Compile directly to raw standalone ELF machine binary (0%% C, 0%% Python)\n");
+        printf("  airalang -c \"<code>\"                 Execute inline AiraLang code string\n");
+        printf("  airalang                            Start AiraLang interactive REPL shell\n");
+        printf("  airalang -v, --version              Show engine version & security metadata\n");
         return 0;
     }
 

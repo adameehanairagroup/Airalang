@@ -1,23 +1,23 @@
 #!/bin/bash
 # =============================================================
-# 🌟 AiraLang Global Installer for Termux & Linux
-# 👑 Creator: Adam Eehan (Aira Group of Technology)
+# 🌟 AiraLang Global Native Installer for Linux & Termux
+# 👑 Creator: Adam Eehan (Founder & CEO, Aira Group of Technology)
+# ⚡ Engine: AiraLang S1 Duo Native Systems Flagship
 # =============================================================
 
 set -e
 
 echo -e "\033[1;36m"
-echo "    ___    _           __                    "
-echo "   /   |  (_)________ _/ /   ____ _____  ____ _"
-echo "  / /| | / / ___/ __ \`/ /   / __ \`/ __ \/ __ \`/"
-echo " / ___ |/ / /  / /_/ / /___/ /_/ / / / / /_/ / "
-echo "/_/  |_/_/_/   \\__,_/_____/\\__,_/_/ /_/\\__, /  "
-echo "                                      /____/   "
+echo "     ___   _           __                    _____ __   ____             "
+echo "    /   | (_)________ _/ /   ____ _____  ____ _ / ___// /  / __ \__  ______  "
+echo "   / /| |/ / ___/ __ \`/ /   / __ \`/ __ \/ __ \`// __// /  / / / / / / / __ \ "
+echo "  / ___ / / /  / /_/ / /___/ /_/ / / / / /_/ /___/ / /__/ /_/ / /_/ / /_/ / "
+echo " /_/  |/_/_/   \\__,_/_____/\\__,_/_/ /_/\\__, //____/____/_____/\\__,_/\\____/  "
+echo "                                      /____/                                "
 echo -e "\033[0m"
-echo -e "\033[1;32m[*] Installing AiraLang (v1.2.0 Next-Gen Engine)...\033[0m"
+echo -e "\033[1;32m[*] Compiling & Installing AiraLang S1 Duo Native Engine...\033[0m"
 
-# Target installation directory
-INSTALL_DIR="$HOME/.airalang"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR=""
 
 if [ -d "/data/data/com.termux/files/usr/bin" ]; then
@@ -31,29 +31,15 @@ else
     mkdir -p "$BIN_DIR"
 fi
 
-echo -e "\033[1;34m[*] Target Binary Path: $BIN_DIR/airalang\033[0m"
+echo -e "\033[1;34m[*] Building native engine with clang...\033[0m"
+cd "$REPO_DIR/s1duo"
+make clean
+make
 
-# Create symlink / launcher
-cat << 'EOF' > "$BIN_DIR/airalang"
-#!/data/data/com.termux/files/usr/bin/python3
-import sys
-import os
+cp bin/airalang "$BIN_DIR/airalang"
+cp bin/airalang "$BIN_DIR/airalang3"
+chmod 755 "$BIN_DIR/airalang" "$BIN_DIR/airalang3"
 
-INSTALL_PATH = os.path.expanduser("~/.airalang/src")
-LOCAL_PATH = "/data/data/com.termux/files/home/airalang/src"
-
-if os.path.exists(LOCAL_PATH):
-    sys.path.insert(0, LOCAL_PATH)
-elif os.path.exists(INSTALL_PATH):
-    sys.path.insert(0, INSTALL_PATH)
-
-import cli
-
-if __name__ == "__main__":
-    cli.main()
-EOF
-
-chmod +x "$BIN_DIR/airalang"
-
-echo -e "\033[1;32m[+] AiraLang Successfully Installed! 🚀\033[0m"
-echo -e "\033[1;37m[*] Run \033[1;33mairalang\033[0m to start the REPL, or \033[1;33mairalang <script.aira>\033[0m to run a file.\033[0m"
+echo -e "\033[1;32m[+] AiraLang S1 Duo Successfully Installed to $BIN_DIR/airalang! 🚀\033[0m"
+echo -e "\033[1;37m[*] Run \033[1;33mairalang\033[0m to start the REPL, or \033[1;33mairalang <script.aira>\033[0m to execute.\033[0m"
+echo -e "\033[1;35m[*] Standalone ELF binary compiler: \033[1;33mairalang -b <script.aira> -o <bin>\033[0m"

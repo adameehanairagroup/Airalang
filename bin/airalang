@@ -1,16 +1,9 @@
-#!/usr/bin/env python3
-import sys
-import os
-
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src_dir = os.path.join(base_dir, "src")
-
-if os.path.isdir(src_dir):
-    sys.path.insert(0, src_dir)
-elif os.path.isdir("/data/data/com.termux/files/home/airalang/src"):
-    sys.path.insert(0, "/data/data/com.termux/files/home/airalang/src")
-
-import cli
-
-if __name__ == "__main__":
-    cli.main()
+#!/bin/sh
+# AiraLang Native Launch Script
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -x "$DIR/s1duo/bin/airalang" ]; then
+    exec "$DIR/s1duo/bin/airalang" "$@"
+elif [ -x "/data/data/com.termux/files/usr/bin/airalang" ]; then
+    exec "/data/data/com.termux/files/usr/bin/airalang" "$@"
+fi
+exec python3 "$DIR/src/cli.py" "$@"
