@@ -45,9 +45,6 @@ static EvalSignal signal_continue(void) {
 
 AiraValue eval_expression(Evaluator* eval, Environment* env, ExprNode* expr) {
     if (!expr) return val_null();
-    if (expr->canary != AIRA_CANARY_VALUE) {
-        aira_panic("Security Violation: ExprNode canary check failed! Expression corrupted.");
-    }
 
     switch (expr->type) {
         case EXPR_LITERAL:
@@ -244,11 +241,6 @@ AiraValue eval_expression(Evaluator* eval, Environment* env, ExprNode* expr) {
 
             AiraValue callee = eval_expression(eval, env, expr->as.call.callee);
 
-            /* Security Check: Call Stack Recursion Depth Limiter */
-            if (eval->call_depth >= AIRA_MAX_RECURSION_DEPTH) {
-                aira_panic("Security Panic: Maximum recursion depth (%d) exceeded at line %d! Stack overflow attack mitigated.", AIRA_MAX_RECURSION_DEPTH, expr->line);
-            }
-
             if (callee.type == VAL_BUILTIN_FN) {
                 AiraValue args[32];
                 int count = expr->as.call.arg_count;
@@ -291,9 +283,6 @@ AiraValue eval_expression(Evaluator* eval, Environment* env, ExprNode* expr) {
 
 EvalSignal eval_statement(Evaluator* eval, Environment* env, StmtNode* stmt) {
     if (!stmt) return signal_ok();
-    if (stmt->canary != AIRA_CANARY_VALUE) {
-        aira_panic("Security Violation: StmtNode canary check failed! Corrupted statement.");
-    }
 
     switch (stmt->type) {
         case STMT_LET: {

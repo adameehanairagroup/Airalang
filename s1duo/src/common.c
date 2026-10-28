@@ -4,7 +4,7 @@ void* aira_malloc(size_t size) {
     if (size == 0) return NULL;
     void* ptr = malloc(size);
     if (!ptr) {
-        fprintf(stderr, COLOR_RED "[!] Critical Security/Memory Failure: Out of memory attempting to allocate %zu bytes." COLOR_RESET "\n", size);
+        fprintf(stderr, COLOR_RED "[!] Critical Error: Out of memory allocating %zu bytes." COLOR_RESET "\n", size);
         exit(EXIT_FAILURE);
     }
     return ptr;
@@ -14,7 +14,7 @@ void* aira_calloc(size_t num, size_t size) {
     if (num == 0 || size == 0) return NULL;
     void* ptr = calloc(num, size);
     if (!ptr) {
-        fprintf(stderr, COLOR_RED "[!] Critical Security/Memory Failure: Out of memory in calloc (%zu * %zu)." COLOR_RESET "\n", num, size);
+        fprintf(stderr, COLOR_RED "[!] Critical Error: Out of memory in calloc (%zu * %zu)." COLOR_RESET "\n", num, size);
         exit(EXIT_FAILURE);
     }
     return ptr;
@@ -27,7 +27,7 @@ void* aira_realloc(void* ptr, size_t new_size) {
     }
     void* new_ptr = realloc(ptr, new_size);
     if (!new_ptr) {
-        fprintf(stderr, COLOR_RED "[!] Critical Security/Memory Failure: Out of memory reallocating to %zu bytes." COLOR_RESET "\n", new_size);
+        fprintf(stderr, COLOR_RED "[!] Critical Error: Out of memory reallocating to %zu bytes." COLOR_RESET "\n", new_size);
         exit(EXIT_FAILURE);
     }
     return new_ptr;
@@ -43,7 +43,7 @@ char* aira_strdup(const char* s) {
     if (!s) return NULL;
     size_t len = strlen(s);
     if (len > AIRA_MAX_STRING_LEN) {
-        fprintf(stderr, COLOR_RED "[!] Security Violation: String length %zu exceeds maximum permitted size (%d bytes)." COLOR_RESET "\n", len, AIRA_MAX_STRING_LEN);
+        fprintf(stderr, COLOR_RED "[!] Error: String length %zu exceeds maximum permitted size (%d bytes)." COLOR_RESET "\n", len, AIRA_MAX_STRING_LEN);
         exit(EXIT_FAILURE);
     }
     char* copy = (char*)aira_malloc(len + 1);
@@ -63,7 +63,7 @@ char* aira_strndup(const char* s, size_t n) {
 }
 
 void aira_panic(const char* fmt, ...) {
-    fprintf(stderr, COLOR_RED "[!] AiraLang S1 Duo Security Panic: " COLOR_RESET);
+    fprintf(stderr, COLOR_RED "[!] Runtime Error: " COLOR_RESET);
     va_list args;
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);

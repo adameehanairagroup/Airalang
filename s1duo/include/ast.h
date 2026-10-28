@@ -43,7 +43,6 @@ struct ExprNode {
     ExprType type;
     int line;
     int col;
-    uint32_t canary;
     union {
         AiraValue literal;
         char* identifier;
@@ -85,7 +84,6 @@ struct StmtNode {
     StmtType type;
     int line;
     int col;
-    uint32_t canary;
     union {
         struct {
             StmtNode** statements;

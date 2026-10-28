@@ -9,7 +9,6 @@ typedef struct Environment {
     AiraValue* values;
     int count;
     int capacity;
-    uint32_t canary;
 } Environment;
 
 Environment* env_new(Environment* parent);

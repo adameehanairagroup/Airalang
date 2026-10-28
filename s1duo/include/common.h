@@ -13,10 +13,9 @@
 #define AIRA_CODENAME "S1 Duo Flagship"
 #define AIRA_ARCHITECT "Adam Eehan (Founder & CEO, Aira Group of Technology)"
 
-/* Security & Hardening Limits */
-#define AIRA_MAX_RECURSION_DEPTH 1000
-#define AIRA_MAX_STRING_LEN      (32 * 1024 * 1024) /* 32 MB */
-#define AIRA_CANARY_VALUE        0x41495241 /* 'AIRA' */
+/* Execution Limits */
+#define AIRA_MAX_RECURSION_DEPTH 10000
+#define AIRA_MAX_STRING_LEN      (128 * 1024 * 1024) /* 128 MB */
 
 /* ANSI Color Formatting */
 #define COLOR_RESET   "\033[0m"
@@ -38,7 +37,7 @@ void  aira_free(void* ptr);
 char* aira_strdup(const char* s);
 char* aira_strndup(const char* s, size_t n);
 
-/* Diagnostic & Security Logging */
+/* Diagnostic Logging */
 void aira_panic(const char* fmt, ...);
 void aira_error_at(const char* filename, int line, int col, const char* fmt, ...);
 

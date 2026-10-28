@@ -23,7 +23,6 @@ typedef struct {
     size_t data_cap;
 
     uint64_t base_vaddr;
-    uint32_t canary;
 } ElfEmitter;
 
 void elf_emitter_init(ElfEmitter* emitter, TargetArch arch);

@@ -16,7 +16,6 @@ COLOR_RESET);
     printf(COLOR_DIM "----------------------------------------------------------------------\n" COLOR_RESET);
     printf(" " COLOR_GREEN "[+]" COLOR_RESET " " COLOR_BOLD "Engine:" COLOR_RESET " %s v%s\n", AIRA_CODENAME, AIRA_VERSION);
     printf(" " COLOR_BLUE "[*]" COLOR_RESET " " COLOR_BOLD "Architect:" COLOR_RESET " %s\n", AIRA_ARCHITECT);
-    printf(" " COLOR_YELLOW "[🛡️]" COLOR_RESET " " COLOR_BOLD "Security:" COLOR_RESET " Hardened Stack, Anti-Tamper Canaries (0x%08X)\n", AIRA_CANARY_VALUE);
     printf(" " COLOR_MAGENTA "[⚡]" COLOR_RESET " " COLOR_BOLD "Runtime:" COLOR_RESET " Pure C Native Binary Execution (Zero Python Overhead)\n");
     printf(COLOR_DIM "----------------------------------------------------------------------\n" COLOR_RESET);
 }
@@ -33,7 +32,7 @@ static char* read_file_source(const char* filepath) {
 
     if (length < 0 || length > AIRA_MAX_STRING_LEN) {
         fclose(f);
-        fprintf(stderr, COLOR_RED "[!] Security Violation: Source file exceeds maximum allowed threshold of %d bytes.\n" COLOR_RESET, AIRA_MAX_STRING_LEN);
+        fprintf(stderr, COLOR_RED "[!] Error: Source file exceeds maximum allowed threshold of %d bytes.\n" COLOR_RESET, AIRA_MAX_STRING_LEN);
         exit(EXIT_FAILURE);
     }
 
@@ -119,7 +118,7 @@ int main(int argc, char** argv) {
         printf("  airalang -b <script.aira> -o <bin>  Compile directly to raw standalone ELF machine binary (0%% C, 0%% Python)\n");
         printf("  airalang -c \"<code>\"                 Execute inline AiraLang code string\n");
         printf("  airalang                            Start AiraLang interactive REPL shell\n");
-        printf("  airalang -v, --version              Show engine version & security metadata\n");
+        printf("  airalang -v, --version              Show engine version\n");
         return 0;
     }
 

@@ -26,7 +26,6 @@ typedef struct {
     struct AiraValue* elements;
     int count;
     int capacity;
-    uint32_t canary;
 } AiraList;
 
 typedef struct {
@@ -34,25 +33,21 @@ typedef struct {
     struct AiraValue* values;
     int count;
     int capacity;
-    uint32_t canary;
 } AiraDict;
 
 typedef struct {
     const char* name;
     struct StmtNode* node;
     struct Environment* closure;
-    uint32_t canary;
 } AiraFunction;
 
 typedef struct {
     const char* name;
     AiraDict* members;
-    uint32_t canary;
 } AiraModule;
 
 typedef struct AiraValue {
     ValueType type;
-    uint32_t canary;
     union {
         bool boolean;
         int64_t integer;
@@ -95,7 +90,7 @@ void  val_print(AiraValue v);
 void  val_free(AiraValue* v);
 AiraValue val_copy(AiraValue v);
 
-/* List and Dict Security & Bounds Helpers */
+/* List and Dict Helpers */
 void      list_append(AiraList* list, AiraValue v);
 AiraValue list_get(AiraList* list, int index);
 void      list_set(AiraList* list, int index, AiraValue v);
@@ -105,7 +100,7 @@ void      dict_set(AiraDict* dict, const char* key, AiraValue v);
 AiraValue dict_get(AiraDict* dict, const char* key);
 bool      dict_has(AiraDict* dict, const char* key);
 
-/* Security Canary Verification */
-void val_verify_security(AiraValue v);
+/* Fast no-op verify macro */
+#define val_verify_security(v) ((void)0)
 
 #endif /* AIRA_VALUE_H */

@@ -53,7 +53,6 @@ void elf_emitter_init(ElfEmitter* emitter, TargetArch arch) {
     emitter->data_buf = (uint8_t*)aira_malloc(emitter->data_cap);
 
     emitter->base_vaddr = 0x400000;
-    emitter->canary = AIRA_CANARY_VALUE;
 }
 
 void elf_emitter_free(ElfEmitter* emitter) {
