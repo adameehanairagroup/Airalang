@@ -347,6 +347,7 @@ static AiraValue crypto_sha256(int argc, AiraValue* args) {
  * ============================================================================== */
 
 static char ai_provider_str[128] = "airagroup/aira-3-flash";
+static char ai_endpoint_str[256] = "";
 static char ai_system_prompt[512] = 
     "You are Aira, the official AI engine of AiraLang, engineered and created by Adam Eehan "
     "(Founder & CEO, Aira Group of Technology).";
@@ -365,6 +366,23 @@ static AiraValue ai_get_provider(int argc, AiraValue* args) {
     return val_string(ai_provider_str);
 }
 
+static AiraValue ai_set_endpoint(int argc, AiraValue* args) {
+    if (argc > 0 && args[0].type == VAL_STRING) {
+        strncpy(ai_endpoint_str, args[0].as.string, sizeof(ai_endpoint_str) - 1);
+        ai_endpoint_str[sizeof(ai_endpoint_str) - 1] = '\0';
+        return val_bool(true);
+    }
+    return val_bool(false);
+}
+
+static AiraValue ai_get_endpoint(int argc, AiraValue* args) {
+    (void)argc; (void)args;
+    const char* env_url = getenv("AIRA_API_URL");
+    if (ai_endpoint_str[0]) return val_string(ai_endpoint_str);
+    if (env_url && strlen(env_url) > 0) return val_string(env_url);
+    return val_string("http://127.0.0.1:8080/v1/chat/completions");
+}
+
 static AiraValue ai_set_system(int argc, AiraValue* args) {
     if (argc > 0 && args[0].type == VAL_STRING) {
         strncpy(ai_system_prompt, args[0].as.string, sizeof(ai_system_prompt) - 1);
@@ -378,8 +396,20 @@ static AiraValue ai_ask(int argc, AiraValue* args) {
     if (argc < 1) return val_string("");
     char* prompt = val_to_string(args[0]);
 
-    /* Auto-launch Aira-AI-Endpoint in background if not currently active */
-    system("pgrep -f 'Aira-AI-Endpoint/server.py' >/dev/null 2>&1 || (nohup python3 $HOME/Aira-AI-Endpoint/server.py >/dev/null 2>&1 & sleep 1)");
+    const char* target_url = "http://127.0.0.1:8080/v1/chat/completions";
+    if (ai_endpoint_str[0]) {
+        target_url = ai_endpoint_str;
+    } else {
+        const char* env_url = getenv("AIRA_API_URL");
+        if (env_url && strlen(env_url) > 0) {
+            target_url = env_url;
+        }
+    }
+
+    /* Auto-launch Aira-AI-Endpoint locally only if target URL is localhost */
+    if (strstr(target_url, "127.0.0.1") || strstr(target_url, "localhost")) {
+        system("pgrep -f 'Aira-AI-Endpoint/server.py' >/dev/null 2>&1 || (nohup python3 $HOME/Aira-AI-Endpoint/server.py >/dev/null 2>&1 & sleep 1)");
+    }
 
     /* Escape quotes for safe curl execution */
     char safe_prompt[2048];
@@ -394,10 +424,10 @@ static AiraValue ai_ask(int argc, AiraValue* args) {
 
     char cmd[4096];
     snprintf(cmd, sizeof(cmd),
-        "curl -s -m 35 -X POST 'http://127.0.0.1:8080/v1/chat/completions' "
+        "curl -s -m 35 -X POST '%s' "
         "-H 'Content-Type: application/json' "
         "-d '{\"model\": \"%s\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}]}' 2>/dev/null",
-        ai_provider_str, safe_prompt
+        target_url, ai_provider_str, safe_prompt
     );
 
     FILE* fp = popen(cmd, "r");
@@ -525,6 +555,8 @@ AiraValue load_builtin_module(const char* name) {
         AiraValue mod = val_module("ai");
         dict_set(mod.as.module->members, "set_provider", val_builtin(ai_set_provider));
         dict_set(mod.as.module->members, "get_provider", val_builtin(ai_get_provider));
+        dict_set(mod.as.module->members, "set_endpoint", val_builtin(ai_set_endpoint));
+        dict_set(mod.as.module->members, "get_endpoint", val_builtin(ai_get_endpoint));
         dict_set(mod.as.module->members, "set_system", val_builtin(ai_set_system));
         dict_set(mod.as.module->members, "ask", val_builtin(ai_ask));
         return mod;
