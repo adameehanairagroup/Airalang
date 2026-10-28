@@ -1,0 +1,23 @@
+# =============================================================
+# GitHub Linguist Overrides for AiraLang Sovereign Language
+# Creator: Adam Eehan (Founder & CEO, Aira Group of Technology)
+# =============================================================
+
+# 1. Register .aira as Primary Language (AiraLang)
+*.aira linguist-detectable=true
+*.aira linguist-language=AiraLang
+
+# 2. Exclude compiler implementation and legacy runtime from language bar
+src/** linguist-vendored
+s1duo/** linguist-vendored
+vscode-extension/** linguist-vendored
+releases/** linguist-vendored
+bin/** linguist-vendored
+install.sh linguist-vendored
+install.bat linguist-vendored
+setup.nsi linguist-vendored
+
+# 3. Treat examples as detectable AiraLang code
+examples/** linguist-documentation=false
+examples/*.aira linguist-detectable=true
+examples/*.aira linguist-language=AiraLang
