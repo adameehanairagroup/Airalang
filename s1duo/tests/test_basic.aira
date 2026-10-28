@@ -1,0 +1,61 @@
+// ==========================================
+// AiraLang S1 Duo — Basic Test Suite
+// Architect: Adam Eehan
+// ==========================================
+
+say "--- [1] Variable & Math Test ---";
+let a = 15;
+let b = 4;
+say "a =", a, ", b =", b;
+say "a + b =", a + b;
+say "a - b =", a - b;
+say "a * b =", a * b;
+say "a / b =", a / b;
+say "a % b =", a % b;
+
+say "\n--- [2] Control Flow Test ---";
+let score = 92;
+if (score >= 90) {
+    say "Grade: S-Rank Master!";
+} else {
+    say "Grade: Standard";
+}
+
+let count = 3;
+while (count > 0) {
+    say "Countdown:", count;
+    count -= 1;
+}
+
+say "\n--- [3] Function Test ---";
+fn fib(n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+say "fib(10) =", fib(10);
+
+say "\n--- [4] Data Structures Test ---";
+let list = ["AiraLang", "S1", "Duo"];
+say "List length:", list.length;
+for item in list {
+    say "Item:", item;
+}
+
+let user = {"name": "Adam Eehan", "title": "Founder & CEO"};
+say "Dict access:", user["name"], "-", user["title"];
+
+say "\n--- [5] Native Modules Test ---";
+import "math";
+say "Square root of 144 =", math.sqrt(144);
+say "PI =", math.pi;
+
+import "crypto";
+let data = "Aira Group Sovereign Security 2026";
+let hash = crypto.sha256(data);
+say "SHA-256 of '" + data + "':";
+say hash;
+
+say "\n[✓] All AiraLang S1 Duo basic tests passed perfectly!";

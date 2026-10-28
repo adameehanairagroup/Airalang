@@ -18,4 +18,4 @@ let greeting = ai.ask("Say Hello to the developer from AiraLang!");
 say "AI Engine Response:", greeting;
 
 // In-Code AI Inspection Directive
-@airaai "any errors?"
+@airaai "any errors?";

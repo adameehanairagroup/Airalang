@@ -4,3 +4,6 @@ __pycache__/
 .DS_Store
 *.tmp
 *.log
+*.o
+s1duo/bin/
+s1duo/src/*.o
