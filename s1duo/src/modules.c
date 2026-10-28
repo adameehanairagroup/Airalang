@@ -392,6 +392,42 @@ static AiraValue ai_set_system(int argc, AiraValue* args) {
     return val_bool(false);
 }
 
+static uint32_t json_parse_hex4(const char* s) {
+    uint32_t val = 0;
+    for (int i = 0; i < 4; i++) {
+        char c = s[i];
+        val <<= 4;
+        if (c >= '0' && c <= '9') val |= (c - '0');
+        else if (c >= 'a' && c <= 'f') val |= (c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F') val |= (c - 'A' + 10);
+        else return 0;
+    }
+    return val;
+}
+
+static size_t json_encode_utf8(uint32_t cp, char* out) {
+    if (cp <= 0x7F) {
+        out[0] = (char)cp;
+        return 1;
+    } else if (cp <= 0x7FF) {
+        out[0] = (char)(0xC0 | (cp >> 6));
+        out[1] = (char)(0x80 | (cp & 0x3F));
+        return 2;
+    } else if (cp <= 0xFFFF) {
+        out[0] = (char)(0xE0 | (cp >> 12));
+        out[1] = (char)(0x80 | ((cp >> 6) & 0x3F));
+        out[2] = (char)(0x80 | (cp & 0x3F));
+        return 3;
+    } else if (cp <= 0x10FFFF) {
+        out[0] = (char)(0xF0 | (cp >> 18));
+        out[1] = (char)(0x80 | ((cp >> 12) & 0x3F));
+        out[2] = (char)(0x80 | ((cp >> 6) & 0x3F));
+        out[3] = (char)(0x80 | (cp & 0x3F));
+        return 4;
+    }
+    return 0;
+}
+
 static AiraValue ai_ask(int argc, AiraValue* args) {
     if (argc < 1) return val_string("");
     char* prompt = val_to_string(args[0]);
@@ -466,10 +502,29 @@ static AiraValue ai_ask(int argc, AiraValue* args) {
                 size_t c_idx = 0;
                 for (size_t k = 0; content_start[k]; k++) {
                     if (content_start[k] == '\\' && content_start[k+1]) {
-                        k++;
-                        if (content_start[k] == 'n') clean[c_idx++] = '\n';
-                        else if (content_start[k] == 't') clean[c_idx++] = '\t';
-                        else clean[c_idx++] = content_start[k];
+                        char esc = content_start[k+1];
+                        if (esc == 'n') { clean[c_idx++] = '\n'; k++; }
+                        else if (esc == 't') { clean[c_idx++] = '\t'; k++; }
+                        else if (esc == 'r') { clean[c_idx++] = '\r'; k++; }
+                        else if (esc == '"') { clean[c_idx++] = '"'; k++; }
+                        else if (esc == '\\') { clean[c_idx++] = '\\'; k++; }
+                        else if (esc == 'u' && content_start[k+2] && content_start[k+3] && content_start[k+4] && content_start[k+5]) {
+                            uint32_t cp = json_parse_hex4(&content_start[k+2]);
+                            k += 5;
+                            /* Check for UTF-16 surrogate pair (e.g. \uD83D\uDCAC -> 💬) */
+                            if (cp >= 0xD800 && cp <= 0xDBFF && content_start[k+1] == '\\' && content_start[k+2] == 'u' &&
+                                content_start[k+3] && content_start[k+4] && content_start[k+5] && content_start[k+6]) {
+                                uint32_t low = json_parse_hex4(&content_start[k+3]);
+                                if (low >= 0xDC00 && low <= 0xDFFF) {
+                                    cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
+                                    k += 6;
+                                }
+                            }
+                            c_idx += json_encode_utf8(cp, &clean[c_idx]);
+                        } else {
+                            clean[c_idx++] = esc;
+                            k++;
+                        }
                     } else {
                         clean[c_idx++] = content_start[k];
                     }
