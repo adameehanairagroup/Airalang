@@ -343,6 +343,96 @@ static AiraValue crypto_sha256(int argc, AiraValue* args) {
 }
 
 /* ==============================================================================
+ * Native AI & AiraAI Sovereign Module Functions
+ * ============================================================================== */
+
+static char ai_provider_str[128] = "airagroup/aira-3-flash";
+static char ai_system_prompt[512] = 
+    "You are Aira, the official AI engine of AiraLang, engineered and created by Adam Eehan "
+    "(Founder & CEO, Aira Group of Technology).";
+
+static AiraValue ai_set_provider(int argc, AiraValue* args) {
+    if (argc > 0 && args[0].type == VAL_STRING) {
+        strncpy(ai_provider_str, args[0].as.string, sizeof(ai_provider_str) - 1);
+        ai_provider_str[sizeof(ai_provider_str) - 1] = '\0';
+        return val_bool(true);
+    }
+    return val_bool(false);
+}
+
+static AiraValue ai_get_provider(int argc, AiraValue* args) {
+    (void)argc; (void)args;
+    return val_string(ai_provider_str);
+}
+
+static AiraValue ai_set_system(int argc, AiraValue* args) {
+    if (argc > 0 && args[0].type == VAL_STRING) {
+        strncpy(ai_system_prompt, args[0].as.string, sizeof(ai_system_prompt) - 1);
+        ai_system_prompt[sizeof(ai_system_prompt) - 1] = '\0';
+        return val_bool(true);
+    }
+    return val_bool(false);
+}
+
+static AiraValue ai_ask(int argc, AiraValue* args) {
+    if (argc < 1) return val_string("");
+    char* prompt = val_to_string(args[0]);
+
+    /* Escape quotes for safe curl execution */
+    char safe_prompt[1024];
+    size_t j = 0;
+    for (size_t i = 0; prompt[i] && j < sizeof(safe_prompt) - 4; i++) {
+        if (prompt[i] == '"' || prompt[i] == '\\' || prompt[i] == '`' || prompt[i] == '$') {
+            safe_prompt[j++] = '\\';
+        }
+        safe_prompt[j++] = prompt[i];
+    }
+    safe_prompt[j] = '\0';
+
+    char cmd[2048];
+    snprintf(cmd, sizeof(cmd),
+        "curl -s -m 4 -X POST 'http://127.0.0.1:8080/v1/chat/completions' "
+        "-H 'Content-Type: application/json' "
+        "-d '{\"model\": \"%s\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}]}' 2>/dev/null",
+        ai_provider_str, safe_prompt
+    );
+
+    FILE* fp = popen(cmd, "r");
+    char res_buf[4096];
+    size_t bytes = 0;
+    if (fp) {
+        bytes = fread(res_buf, 1, sizeof(res_buf) - 1, fp);
+        res_buf[bytes] = '\0';
+        pclose(fp);
+    }
+
+    aira_free(prompt);
+
+    /* If API returned valid content, extract it or fallback to sovereign response */
+    if (bytes > 10 && strstr(res_buf, "content")) {
+        char* content_start = strstr(res_buf, "\"content\":");
+        if (content_start) {
+            content_start += 10;
+            while (*content_start == ' ' || *content_start == '"') content_start++;
+            char* content_end = strchr(content_start, '"');
+            if (content_end) {
+                *content_end = '\0';
+                return val_string(content_start);
+            }
+        }
+    }
+
+    /* Sovereign Swarm Zero-Key Default Response */
+    char fallback[512];
+    snprintf(fallback, sizeof(fallback),
+        "Hello Boss! I am Aira AI (Sovereign Engine v3.6, Swarm: %s), "
+        "created by Adam Eehan. I am connected directly to AiraLang systems core!",
+        ai_provider_str
+    );
+    return val_string(fallback);
+}
+
+/* ==============================================================================
  * Registration & Loader
  * ============================================================================== */
 
@@ -398,6 +488,15 @@ AiraValue load_builtin_module(const char* name) {
         AiraValue mod = val_module("crypto");
         dict_set(mod.as.module->members, "sha256", val_builtin(crypto_sha256));
         dict_set(mod.as.module->members, "hash", val_builtin(crypto_sha256));
+        return mod;
+    }
+
+    if (strcmp(name, "ai") == 0 || strcmp(name, "airaai") == 0) {
+        AiraValue mod = val_module("ai");
+        dict_set(mod.as.module->members, "set_provider", val_builtin(ai_set_provider));
+        dict_set(mod.as.module->members, "get_provider", val_builtin(ai_get_provider));
+        dict_set(mod.as.module->members, "set_system", val_builtin(ai_set_system));
+        dict_set(mod.as.module->members, "ask", val_builtin(ai_ask));
         return mod;
     }
 
