@@ -378,8 +378,11 @@ static AiraValue ai_ask(int argc, AiraValue* args) {
     if (argc < 1) return val_string("");
     char* prompt = val_to_string(args[0]);
 
+    /* Auto-launch Aira-AI-Endpoint in background if not currently active */
+    system("pgrep -f 'Aira-AI-Endpoint/server.py' >/dev/null 2>&1 || (nohup python3 $HOME/Aira-AI-Endpoint/server.py >/dev/null 2>&1 & sleep 1)");
+
     /* Escape quotes for safe curl execution */
-    char safe_prompt[1024];
+    char safe_prompt[2048];
     size_t j = 0;
     for (size_t i = 0; prompt[i] && j < sizeof(safe_prompt) - 4; i++) {
         if (prompt[i] == '"' || prompt[i] == '\\' || prompt[i] == '`' || prompt[i] == '$') {
@@ -389,16 +392,16 @@ static AiraValue ai_ask(int argc, AiraValue* args) {
     }
     safe_prompt[j] = '\0';
 
-    char cmd[2048];
+    char cmd[4096];
     snprintf(cmd, sizeof(cmd),
-        "curl -s -m 4 -X POST 'http://127.0.0.1:8080/v1/chat/completions' "
+        "curl -s -m 35 -X POST 'http://127.0.0.1:8080/v1/chat/completions' "
         "-H 'Content-Type: application/json' "
         "-d '{\"model\": \"%s\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}]}' 2>/dev/null",
         ai_provider_str, safe_prompt
     );
 
     FILE* fp = popen(cmd, "r");
-    char res_buf[4096];
+    char res_buf[8192];
     size_t bytes = 0;
     if (fp) {
         bytes = fread(res_buf, 1, sizeof(res_buf) - 1, fp);
@@ -408,16 +411,43 @@ static AiraValue ai_ask(int argc, AiraValue* args) {
 
     aira_free(prompt);
 
-    /* If API returned valid content, extract it or fallback to sovereign response */
-    if (bytes > 10 && strstr(res_buf, "content")) {
+    /* If API returned valid content, extract and unescape it */
+    if (bytes > 10 && strstr(res_buf, "\"content\":")) {
         char* content_start = strstr(res_buf, "\"content\":");
         if (content_start) {
             content_start += 10;
-            while (*content_start == ' ' || *content_start == '"') content_start++;
-            char* content_end = strchr(content_start, '"');
-            if (content_end) {
-                *content_end = '\0';
-                return val_string(content_start);
+            while (*content_start == ' ' || *content_start == '\t' || *content_start == '\r' || *content_start == '\n') content_start++;
+            if (*content_start == '"') {
+                content_start++;
+                /* Find unescaped end quote */
+                char* p = content_start;
+                while (*p) {
+                    if (*p == '\\' && *(p + 1)) {
+                        p += 2;
+                    } else if (*p == '"') {
+                        *p = '\0';
+                        break;
+                    } else {
+                        p++;
+                    }
+                }
+                /* Unescape \n, \", etc. */
+                char* clean = (char*)aira_malloc(strlen(content_start) + 1);
+                size_t c_idx = 0;
+                for (size_t k = 0; content_start[k]; k++) {
+                    if (content_start[k] == '\\' && content_start[k+1]) {
+                        k++;
+                        if (content_start[k] == 'n') clean[c_idx++] = '\n';
+                        else if (content_start[k] == 't') clean[c_idx++] = '\t';
+                        else clean[c_idx++] = content_start[k];
+                    } else {
+                        clean[c_idx++] = content_start[k];
+                    }
+                }
+                clean[c_idx] = '\0';
+                AiraValue ret = val_string(clean);
+                aira_free(clean);
+                return ret;
             }
         }
     }
